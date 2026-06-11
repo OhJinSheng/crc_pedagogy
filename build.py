@@ -16,8 +16,8 @@ from pathlib import Path
 from docx import Document
 
 # ── PATHS ─────────────────────────────────────────────────────────────────
-TEMPLATE   = Path('/tmp/template.html')
-OUTPUT     = Path('/tmp/pedagogy-hub.html')
+TEMPLATE   = Path('template.html')
+OUTPUT     = Path('pedagogy-hub.html')
 
 # Map approach key → docx path. Set to None when not yet available.
 DOCX_PATHS = {
