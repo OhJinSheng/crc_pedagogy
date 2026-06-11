@@ -21,10 +21,10 @@ OUTPUT     = Path('pedagogy-hub.html')
 
 # Map approach key → docx path. Set to None when not yet available.
 DOCX_PATHS = {
-    'pbl': Path('/mnt/user-data/uploads/PBL.docx'),
-    'ibl': None,
-    'cbl': None,
-    'ssi': None,
+    'pbl': Path('PBL.docx'),
+    'ibl': Path('IBL.docx'),
+    'cbl': Path('CBL.docx'),
+    'ssi': Path('SSI.docx'),
 }
 
 # ── SANITISE ──────────────────────────────────────────────────────────────
