@@ -16,15 +16,15 @@ from pathlib import Path
 from docx import Document
 
 # ── PATHS ─────────────────────────────────────────────────────────────────
-TEMPLATE   = Path('template.html')
-OUTPUT     = Path('pedagogy-hub.html')
+TEMPLATE   = Path('/tmp/template.html')
+OUTPUT     = Path('/tmp/pedagogy-hub.html')
 
 # Map approach key → docx path. Set to None when not yet available.
 DOCX_PATHS = {
-    'pbl': Path('PBL.docx'),
-    'ibl': Path('IBL.docx'),
-    'cbl': Path('CBL.docx'),
-    'ssi': Path('SSI.docx'),
+    'pbl': Path('/mnt/user-data/uploads/PBL.docx'),
+    'ibl': None,
+    'cbl': None,
+    'ssi': None,
 }
 
 # ── SANITISE ──────────────────────────────────────────────────────────────
@@ -232,21 +232,26 @@ def parse_docx(path):
         elif section == 'le':
             le_bullets.append(t)
 
-    # ── Key question ─────────────────────────────────────────────────────
+    # ── Key question ────────────────────────────────────────────────────────────────────────
     key_question = ''
     key_question_body = ''
     if key_q_table:
-        full = clean(key_q_table.rows[0].cells[0].text)
-        # "Key Question: <question> <body>"
-        m = re.match(r'Key Question[:\s]+(.+?)(?=\s{2,}|\n|Singapore)', full, re.IGNORECASE)
-        if m:
-            key_question = clean(m.group(1))
-            key_question_body = clean(full[m.end():].strip())
-        else:
-            # Fallback: first sentence is the question
-            sentences = full.split('. ')
-            key_question = sentences[0].replace('Key Question:', '').replace('Key Question', '').strip(' :')
-            key_question_body = '. '.join(sentences[1:])
+        # Split cell into non-empty lines; question is the first content
+        # line after the 'Key Question:' label; rest are body paragraphs.
+        lines_kq = [clean(l) for l in key_q_table.rows[0].cells[0].text.split('\n') if clean(l)]
+        q_lines, body_lines, found_q = [], [], False
+        for line in lines_kq:
+            if re.match(r'key question', line, re.IGNORECASE):
+                after = re.sub(r'^key question\s*[:\-]?\s*', '', line, flags=re.IGNORECASE).strip()
+                if after:
+                    q_lines.append(after)
+                found_q = True
+            elif found_q and not q_lines:
+                q_lines.append(line)
+            elif found_q:
+                body_lines.append(line)
+        key_question      = ' '.join(q_lines)
+        key_question_body = '\n\n'.join(body_lines)
 
     # ── Phase table ───────────────────────────────────────────────────────
     phases = []
