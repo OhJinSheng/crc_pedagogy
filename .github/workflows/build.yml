@@ -33,7 +33,7 @@ jobs:
       - name: Run build script
         run: python3 build.py
 
-- name: Commit and push generated HTML
+      - name: Commit and push generated HTML
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
