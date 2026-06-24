@@ -5,509 +5,409 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pedagogical Approaches</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --sage:#4a6741;--sage-light:#e8efe7;--sage-mid:#b8ceb5;
-  --slate:#2c3e50;--slate-mid:#5a6a7a;--slate-light:#f0f3f6;
-  --paper:#faf9f6;--white:#ffffff;
-  --tech-bg:#e8f4fd;--tech-border:#4a90c4;--tech-text:#1a5272;
-  --border:#dde3e8;--text:#1e2a35;--text-muted:#6b7a8a;
-  --radius:8px;--cell-max-h:180px;
-  --shadow:0 1px 4px rgba(0,0,0,0.06),0 2px 10px rgba(0,0,0,0.04);
-  --shadow-md:0 4px 18px rgba(0,0,0,0.10);
+  --pbl:#4a6741;--pbl-light:#eaf2e8;--pbl-mid:#7aaa6f;
+  --ibl:#3d6b84;--ibl-light:#e6f0f6;--ibl-mid:#6a9bb5;
+  --cbl:#7a6a3a;--cbl-light:#f5f0e3;--cbl-mid:#b9a46a;
+  --ssi:#6a3d6b;--ssi-light:#f4eaf5;--ssi-mid:#aa6aab;
+  --ink:#1a1614;--slate:#5a5650;--rule:#ddd8d0;--bg:#f8f5f0;
+  --radius:6px;--shadow:0 2px 8px rgba(0,0,0,.08);
+  --accent:var(--pbl);--accent-light:var(--pbl-light);--accent-mid:var(--pbl-mid);
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:"DM Sans",sans-serif;background:var(--paper);color:var(--text);line-height:1.65;font-size:15px;}
-header{background:var(--slate);color:#fff;padding:22px 40px;border-bottom:3px solid var(--sage);}
-header h1{font-family:"Libre Baskerville",serif;font-size:1.35rem;font-weight:700;letter-spacing:-.01em;}
-.approach-tabs{background:var(--white);border-bottom:1px solid var(--border);padding:0 40px;display:flex;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.06);}
-.approach-tab{padding:14px 20px;font-size:.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--slate-mid);cursor:pointer;border-bottom:3px solid transparent;transition:all .18s;white-space:nowrap;position:relative;top:1px;user-select:none;}
-.approach-tab:hover{color:var(--sage);}
-.approach-tab.active{color:var(--sage);border-bottom-color:var(--sage);}
-.approach-tab.coming-soon{color:#b8c8d0;cursor:default;}
-.approach-tab.coming-soon::after{content:"soon";font-size:.58rem;background:#e4eaed;color:#9aaab5;padding:1px 5px;border-radius:8px;margin-left:5px;letter-spacing:.04em;vertical-align:1px;}
-.approach-panel{display:none;}
-.approach-panel.active{display:block;}
-.content-wrap{max-width:1100px;margin:0 auto;padding:28px 40px 64px;}
-/* ACCORDION */
-.accordion{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden;}
-.accordion-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;user-select:none;transition:background .15s;gap:12px;}
-.accordion-hdr:hover{background:var(--slate-light);}
-.accordion-hdr h2{font-family:"Libre Baskerville",serif;font-size:.92rem;font-weight:700;color:var(--slate);}
-.acc-chev{color:var(--text-muted);font-size:.68rem;flex-shrink:0;transition:transform .22s;}
-.accordion.open .acc-chev{transform:rotate(180deg);}
-.accordion-body{display:none;border-top:1px solid var(--border);padding:18px 20px;}
-.accordion.open .accordion-body{display:block;}
-/* WHAT IS content */
-.def-para{font-size:.9rem;line-height:1.72;margin-bottom:14px;}
-.sub-head{font-size:.72rem;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 7px;}
-.plain-list{list-style:disc;padding-left:18px;}
-.plain-list li{font-size:.875rem;padding:2px 0;}
-.q-list{list-style:disc;padding:10px 14px 10px 30px;background:#f7f9f8;border:1px solid var(--sage-mid);border-radius:6px;margin-top:4px;}
-.q-list li{padding:3px 0;font-size:.86rem;font-style:italic;color:var(--slate-mid);}
-/* KEY QUESTION */
-.key-q-box{background:linear-gradient(135deg,#f0f6ef,#e7f0e5);border-left:4px solid var(--sage);border-radius:0 6px 6px 0;padding:16px 18px;margin:14px 0 4px;}
-.key-q-lbl{font-size:.63rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--sage);margin-bottom:5px;}
-.key-q-q{font-family:"Libre Baskerville",serif;font-size:.93rem;font-style:italic;color:var(--slate);font-weight:700;margin-bottom:9px;line-height:1.5;}
-.key-q-body{font-size:.84rem;color:var(--slate-mid);line-height:1.72;}
-.key-q-body p+p{margin-top:9px;}
-.key-q-more{display:none;}
-.key-q-btn{background:none;border:none;color:var(--sage);font-size:.78rem;font-weight:600;cursor:pointer;margin-top:7px;padding:0;font-family:inherit;display:inline-flex;align-items:center;gap:4px;}
-.key-q-btn:hover{text-decoration:underline;}
-.seq-list{list-style:disc;padding-left:18px;margin:4px 0 14px;}
-.seq-list li{font-size:.9rem;padding:3px 0;}
-/* PHASES HEADER */
-.phases-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:24px 0 12px;padding-bottom:12px;border-bottom:2px solid var(--border);}
-.phases-hdr h2{font-family:"Libre Baskerville",serif;font-size:1.02rem;color:var(--slate);}
-.phases-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-/* TECH TOGGLE */
-.tech-toggle{display:inline-flex;align-items:center;gap:7px;padding:6px 13px 6px 11px;background:var(--white);border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--slate-mid);transition:all .18s;font-family:inherit;}
-.tech-toggle:hover{border-color:var(--tech-border);color:var(--tech-text);}
-.tech-toggle.on{background:var(--tech-bg);border-color:var(--tech-border);color:var(--tech-text);}
-.toggle-track{width:24px;height:13px;background:#c5d3db;border-radius:7px;position:relative;transition:background .18s;flex-shrink:0;}
-.tech-toggle.on .toggle-track{background:var(--tech-border);}
-.toggle-thumb{width:9px;height:9px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .18s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
-.tech-toggle.on .toggle-thumb{left:13px;}
-/* VIEW SWITCHER */
-.view-switcher{display:inline-flex;border:1.5px solid var(--border);border-radius:20px;overflow:hidden;background:var(--white);}
-.view-btn{padding:6px 14px;font-size:.76rem;font-weight:600;color:var(--slate-mid);cursor:pointer;user-select:none;transition:all .15s;border:none;background:none;font-family:inherit;}
-.view-btn:hover{color:var(--sage);}
-.view-btn.active{background:var(--sage);color:#fff;}
-/* EXPAND TOGGLE */
-.expand-toggle{background:none;border:1px solid var(--border);border-radius:16px;font-size:.73rem;color:var(--slate-mid);cursor:pointer;padding:5px 11px;font-family:inherit;font-weight:500;transition:all .15s;}
-.expand-toggle:hover{border-color:var(--sage);color:var(--sage);}
-.expand-toggle.on{background:var(--sage-light);border-color:var(--sage);color:var(--sage);}
-/* PHASE TABLE */
-.phase-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);}
-.phase-table{width:100%;border-collapse:collapse;table-layout:fixed;}
-.phase-table thead th{background:var(--slate);color:#fff;font-size:.71rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:11px 14px;text-align:left;border-right:1px solid rgba(255,255,255,.12);}
-.phase-table thead th:last-child{border-right:none;}
-.phase-table th.col-phase{width:14%;}
-.phase-table th.col-teacher{width:30%;}
-.phase-table th.col-student{width:28%;}
-.phase-table th.col-aims{width:28%;}
-.phase-table td{vertical-align:top;padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
-.phase-table td:last-child{border-right:none;}
-.phase-table tr:last-child td{border-bottom:none;}
-.phase-table tbody tr:nth-child(even) td{background:#f8faf9;}
-.phase-table tbody tr:nth-child(odd) td{background:var(--white);}
-.td-phase{padding:12px 12px 12px 14px !important;}
-.phase-num-badge{width:26px;height:26px;border-radius:50%;color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin-bottom:7px;}
-.phase-label-name{font-weight:700;font-size:.84rem;color:var(--slate);line-height:1.35;}
-.phase-label-sub{font-size:.74rem;color:var(--text-muted);font-style:italic;margin-top:3px;line-height:1.35;}
-.cell-inner{max-height:var(--cell-max-h);overflow-y:auto;padding:11px 13px;scrollbar-width:thin;scrollbar-color:var(--sage-mid) transparent;}
-.cell-inner::-webkit-scrollbar{width:4px;}
-.cell-inner::-webkit-scrollbar-thumb{background:var(--sage-mid);border-radius:2px;}
-.phase-table.expanded .cell-inner{max-height:none;overflow-y:visible;}
-/* BULLET LISTS */
-.b-list{list-style:disc;padding-left:16px;}
-.b-list li{font-size:.84rem;line-height:1.58;padding:2px 0;}
-.b-list li+li{margin-top:1px;}
-/* TECH BULLETS */
-.tech-item{display:none;list-style:none !important;background:var(--tech-bg);border-left:3px solid var(--tech-border);border-radius:0 3px 3px 0;padding:5px 8px;margin:4px 0 4px -16px;font-size:.81rem;color:var(--tech-text);line-height:1.52;}
-body.show-tech .tech-item{display:list-item;}
-.tech-badge{display:inline-block;font-size:.58rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;background:var(--tech-border);color:#fff;padding:1px 5px;border-radius:3px;margin-right:5px;vertical-align:1px;}
-/* PROMPTS */
-.prompts-box{background:#f7faf7;border:1px solid var(--sage-mid);border-radius:5px;padding:8px 11px;margin-top:8px;}
-.prompts-lbl{font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);margin-bottom:5px;}
-.prompts-list{list-style:disc;padding-left:16px;}
-.prompts-list li{font-size:.82rem;font-style:italic;color:var(--slate-mid);padding:2px 0;}
-/* AIMS */
-.aim-item{display:flex;gap:7px;align-items:flex-start;margin-bottom:6px;}
-.aim-tag{font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:9px;white-space:nowrap;flex-shrink:0;margin-top:2px;}
-.aim-tag.Appreciate{background:#fdebd0;color:#b06020;}
-.aim-tag.Understand{background:#d5e8d4;color:#356633;}
-.aim-tag.Take-Action{background:#dae8fc;color:#2a588a;}
-.aim-text{font-size:.83rem;line-height:1.58;}
-/* CARDS VIEW */
-.phase-cards{display:none;}
-.phase-cards.active{display:block;}
-.phase-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:9px;box-shadow:var(--shadow);overflow:hidden;transition:box-shadow .18s;}
-.phase-card:hover{box-shadow:var(--shadow-md);}
-.phase-card-hdr{display:flex;align-items:center;gap:13px;padding:13px 16px;cursor:pointer;user-select:none;transition:background .15s;}
-.phase-card-hdr:hover{background:var(--slate-light);}
-.pc-num{width:28px;height:28px;border-radius:50%;color:#fff;font-size:.74rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.pc-title{flex:1;}
-.pc-name{font-weight:600;font-size:.9rem;color:var(--slate);}
-.pc-sub{font-size:.74rem;color:var(--text-muted);font-style:italic;margin-top:1px;}
-.pc-chev{color:var(--text-muted);font-size:.68rem;flex-shrink:0;transition:transform .22s;}
-.phase-card.open .pc-chev{transform:rotate(90deg);}
-.phase-card-body{display:none;border-top:1px solid var(--border);}
-.phase-card.open .phase-card-body{display:block;}
-/* COL PANELS */
-.col-panel{border-bottom:1px solid var(--border);}
-.col-panel:last-child{border-bottom:none;}
-.col-hdr{display:flex;align-items:center;gap:7px;padding:9px 16px;cursor:pointer;user-select:none;background:#f7f9fb;transition:background .14s;}
-.col-hdr:hover{background:#eef2f5;}
-.col-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.col-lbl{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;flex:1;}
-.col-chev{color:var(--text-muted);font-size:.63rem;flex-shrink:0;transition:transform .2s;}
-.col-panel.closed .col-chev{transform:rotate(-90deg);}
-.col-content{padding:12px 16px 14px 28px;}
-.col-panel.closed .col-content{display:none;}
-.col-teacher .col-dot{background:#4a6741;}.col-teacher .col-lbl{color:#3a5332;}
-.col-student .col-dot{background:#3d6b84;}.col-student .col-lbl{color:#2d5568;}
-.col-aims    .col-dot{background:#7a6a3a;}.col-aims    .col-lbl{color:#635630;}
-/* DIFF SECTION */
-.diff-section{margin-top:28px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
-.diff-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;cursor:pointer;user-select:none;background:#f5f3ef;transition:background .15s;}
-.diff-hdr:hover{background:#edeae4;}
-.diff-hdr h2{font-family:"Libre Baskerville",serif;font-size:.92rem;color:var(--slate);}
-.diff-section.open .acc-chev{transform:rotate(180deg);}
-.diff-body{display:none;}
-.diff-section.open .diff-body{display:block;}
-.diff-intro{padding:12px 20px;font-size:.85rem;color:var(--text-muted);border-bottom:1px solid var(--border);line-height:1.65;}
-/* DIFF TABLE */
-.diff-table-wrap{overflow-x:auto;}
-.diff-table{width:100%;border-collapse:collapse;table-layout:fixed;}
-.diff-table thead th{background:#4a5a6a;color:#fff;font-size:.7rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:10px 14px;text-align:left;border-right:1px solid rgba(255,255,255,.12);}
-.diff-table thead th:last-child{border-right:none;}
-.diff-table th.col-phase{width:16%;}
-.diff-table th.col-lower{width:42%;}
-.diff-table th.col-higher{width:42%;}
-.diff-table td{vertical-align:top;padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
-.diff-table td:last-child{border-right:none;}
-.diff-table tr:last-child td{border-bottom:none;}
-.diff-table tbody tr:nth-child(even) td{background:#f8faf9;}
-.diff-table tbody tr:nth-child(odd) td{background:var(--white);}
-.diff-cell{max-height:var(--cell-max-h);overflow-y:auto;padding:10px 13px;scrollbar-width:thin;scrollbar-color:#b8c8d0 transparent;}
-.diff-cell::-webkit-scrollbar{width:4px;}
-.diff-cell::-webkit-scrollbar-thumb{background:#b8c8d0;border-radius:2px;}
-.diff-table.expanded .diff-cell{max-height:none;overflow-y:visible;}
-.col-lower-th{color:#d8e4f8 !important;}
-.col-higher-th{color:#cceedd !important;}
-/* COMING SOON */
-.coming-soon-panel{text-align:center;padding:70px 40px;color:var(--text-muted);}
-.coming-soon-panel .cs-icon{font-size:2rem;margin-bottom:12px;}
-.coming-soon-panel h3{font-family:"Libre Baskerville",serif;font-size:.95rem;color:var(--slate-mid);margin-bottom:5px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;line-height:1.65}
+header{background:var(--ink);color:#f8f5f0;padding:20px 32px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:baseline;gap:20px}
+header h1{font-family:'Libre Baskerville',serif;font-size:1.1rem;font-weight:700;letter-spacing:.01em;white-space:nowrap}
+header .subtitle{font-size:.72rem;color:#b0aa9f;letter-spacing:.05em;text-transform:uppercase}
+.tabs{display:flex;background:#fff;border-bottom:2px solid var(--rule);overflow-x:auto;scrollbar-width:none;position:sticky;top:58px;z-index:90}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:13px 26px;font-size:.82rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:none;background:none;color:var(--slate);border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.panel{display:none;padding:28px 26px 64px;max-width:1100px;margin:0 auto}
+.panel.active{display:block}
+.accordion{margin-bottom:10px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--rule)}
+.acc-btn{width:100%;display:flex;justify-content:space-between;align-items:center;padding:13px 18px;cursor:pointer;border:none;background:#fff;text-align:left;font-family:'Libre Baskerville',serif;font-size:.92rem;font-weight:700;color:var(--ink);transition:background .15s}
+.acc-btn:hover{background:var(--bg)}
+.acc-btn.open{border-bottom:1px solid var(--rule)}
+.acc-arrow{font-size:.75rem;color:var(--slate);transition:transform .2s}
+.acc-btn.open .acc-arrow{transform:rotate(180deg)}
+.acc-body{display:none;padding:20px 20px 24px;background:#fff}
+.acc-body.open{display:block}
+.what-is-bullets{list-style:disc;padding-left:1.4em}
+.what-is-bullets li{margin-bottom:.45em;font-size:.88rem}
+.what-is-image{margin:14px 0;text-align:center}
+.what-is-image img{max-width:100%;border-radius:var(--radius);border:1px solid var(--rule)}
+.what-is-image figcaption{font-size:.76rem;color:var(--slate);margin-top:5px;font-style:italic}
+.key-question{background:var(--accent-light);border-left:4px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0;padding:14px 18px;margin-bottom:18px;font-size:.87rem;line-height:1.75}
+.key-question strong{display:block;font-family:'Libre Baskerville',serif;font-size:.92rem;margin-bottom:5px}
+.le-preamble{margin-bottom:16px}
+.le-preamble ul,.diff-preamble ul{list-style:disc;padding-left:1.4em}
+.le-preamble li,.diff-preamble li{margin-bottom:.38em;font-size:.87rem}
+.diff-preamble{margin-bottom:14px}
+.phase-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.ctrl-btn{padding:5px 13px;border-radius:20px;border:1px solid var(--rule);background:#fff;font-size:.76rem;font-weight:500;cursor:pointer;color:var(--slate);transition:all .15s}
+.ctrl-btn:hover{border-color:var(--accent);color:var(--accent)}
+.ctrl-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.phase-table-wrap{overflow-x:auto}
+table.phase-tbl{width:100%;border-collapse:collapse;font-size:.83rem}
+.phase-tbl th{background:var(--accent);color:#fff;padding:9px 12px;text-align:left;font-weight:600;font-size:.76rem;letter-spacing:.04em}
+.phase-tbl td{vertical-align:top;padding:0;border:1px solid var(--rule)}
+.phase-tbl tbody tr:nth-child(even) td{background:var(--accent-light)}
+.cell-inner{padding:9px 11px;max-height:160px;overflow:hidden;transition:max-height .3s ease;position:relative}
+.cell-inner.expanded{max-height:2000px}
+.cell-inner.short{max-height:none}
+.read-more-btn{display:block;margin-top:4px;font-size:.72rem;color:var(--accent);cursor:pointer;background:none;border:none;padding:0;text-align:left}
+.phase-label{font-weight:600;color:var(--accent);font-size:.8rem;padding:9px 11px;vertical-align:top}
+.aims-cell{font-size:.78rem;color:var(--slate);font-style:italic;padding:9px 11px;vertical-align:top}
+.tech-badge{display:inline-block;font-size:.63rem;font-weight:700;background:var(--accent);color:#fff;padding:1px 4px;border-radius:3px;margin-right:3px;vertical-align:middle;letter-spacing:.04em}
+.tech-hidden .tech-item{display:none}
+.bullet-list{list-style:disc;padding-left:1.15em}
+.bullet-list li{margin-bottom:.32em}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.phase-card{background:#fff;border:1px solid var(--rule);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.phase-card h3{font-family:'Libre Baskerville',serif;font-size:.87rem;color:var(--accent);margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--rule)}
+.card-role{font-size:.71rem;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;margin:7px 0 3px}
+table.diff-tbl{width:100%;border-collapse:collapse;font-size:.82rem}
+.diff-tbl th{background:var(--accent);color:#fff;padding:8px 11px;text-align:left;font-size:.76rem;font-weight:600;letter-spacing:.04em}
+.diff-tbl td{vertical-align:top;padding:9px 11px;border:1px solid var(--rule)}
+.diff-tbl tbody tr:nth-child(odd) td{background:#fff}
+.diff-tbl tbody tr:nth-child(even) td{background:var(--accent-light)}
+.diff-stage{font-weight:600;color:var(--accent);font-size:.8rem}
+.diff-role{font-size:.73rem;color:var(--slate);font-style:italic;margin-top:2px}
+.ibl-matrix{width:100%;border-collapse:collapse;font-size:.79rem}
+.ibl-matrix th{background:var(--accent);color:#fff;padding:8px 9px;text-align:center;font-size:.74rem;letter-spacing:.03em}
+.ibl-matrix th.fhdr{text-align:left;width:13%}
+.ibl-matrix th.rhdr{width:8%}
+.ibl-matrix th.lhdr{width:19%}
+.ibl-matrix td{vertical-align:top;padding:7px 9px;border:1px solid var(--rule)}
+.ibl-matrix .fcell{font-weight:600;color:var(--accent);font-size:.8rem}
+.ibl-matrix .rcell{font-size:.72rem;color:var(--slate);font-style:italic}
+.ibl-matrix tr.trow td{background:#fff}
+.ibl-matrix tr.srow td{background:var(--accent-light)}
+.ibl-arrow-row th{padding:4px 9px;font-size:.68rem;font-weight:400;font-style:italic;background:#3a3a3a}
+.view-table .cards-grid{display:none}
+.view-cards .phase-table-wrap{display:none}
 @media(max-width:700px){
-  header{padding:16px 18px;}
-  .approach-tabs{padding:0 8px;overflow-x:auto;scrollbar-width:none;}
-  .approach-tabs::-webkit-scrollbar{display:none;}
-  .content-wrap{padding:16px 14px 48px;}
-  .phases-hdr{flex-direction:column;align-items:flex-start;}
+  header{padding:14px 16px}
+  .panel{padding:18px 12px 48px}
+  .tab{padding:11px 14px;font-size:.75rem}
 }
 </style>
 </head>
 <body>
-<header><h1>Pedagogical Approaches</h1></header>
-
-<nav class="approach-tabs">
-  <div class="approach-tab active" data-panel="pbl">PBL</div>
-  <div class="approach-tab" data-panel="ibl">IBL</div>
-  <div class="approach-tab" data-panel="cbl">CBL</div>
-  <div class="approach-tab" data-panel="ssi">SSI</div>
+<header>
+  <h1>Pedagogical Approaches</h1>
+  <span class="subtitle">Secondary Science — Teacher Resource</span>
+</header>
+<nav class="tabs" role="tablist">
+  <button class="tab active" data-key="pbl" role="tab">PBL</button>
+  <button class="tab" data-key="ibl" role="tab">IBL</button>
+  <button class="tab" data-key="cbl" role="tab">CBL</button>
+  <button class="tab" data-key="ssi" role="tab">SSI</button>
 </nav>
-
-<div id="pbl" class="approach-panel active"><div class="content-wrap" id="pblContent"></div></div>
-<div id="ibl" class="approach-panel"><div class="content-wrap" id="iblContent"></div></div>
-<div id="cbl" class="approach-panel"><div class="content-wrap" id="cblContent"></div></div>
-<div id="ssi" class="approach-panel"><div class="content-wrap" id="ssiContent"></div></div>
-
+<div id="panels"></div>
 <script>
-// ── INJECTED DATA ─────────────────────────────────────────────────────────
-const APPROACH_DATA = {
-  pbl: __PBL_DATA__,
-  ibl: __IBL_DATA__,
-  cbl: __CBL_DATA__,
-  ssi: __SSI_DATA__,
+const APPROACH_DATA={pbl:__PBL_DATA__,ibl:__IBL_DATA__,cbl:__CBL_DATA__,ssi:__SSI_DATA__};
+const APPROACH_META={
+  pbl:{name:'Problem-Based Learning',color:'--pbl',light:'--pbl-light',mid:'--pbl-mid'},
+  ibl:{name:'Inquiry-Based Learning',color:'--ibl',light:'--ibl-light',mid:'--ibl-mid'},
+  cbl:{name:'Concept-Based Learning',color:'--cbl',light:'--cbl-light',mid:'--cbl-mid'},
+  ssi:{name:'Socio-Scientific Issues Learning',color:'--ssi',light:'--ssi-light',mid:'--ssi-mid'},
 };
+const UNNAMED='__UNNAMED__';
 
-const APPROACH_LABELS = {
-  pbl: { name: 'Problem-Based Learning',   icon: '&#127807;' },
-  ibl: { name: 'Inquiry-Based Learning',   icon: '&#128300;' },
-  cbl: { name: 'Concept-Based Learning',                icon: '&#127381;' },
-  ssi: { name: 'Socio-Scientific Issues-Based Learning', icon: '&#9878;&#65039;' },
-};
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
-// ── STATIC UI LABELS ──────────────────────────────────────────────────────
-const LABELS = {
-  teacherRole: "Teacher\u2019s Role",
-  studentRole: "Students\u2019 Role",
-  aims:        "Relevance to the 3 Aims",
-  lowerReady:  "For Lower Readiness Students",
-  higherReady: "For Higher Readiness Students",
-  phase:       "Phase",
-  techShow:    "Show Tech suggestions",
-  techHide:    "Hide Tech suggestions",
-  expandAll:   "Expand all rows",
-  collapseAll: "Collapse rows",
-  readMore:    "Read more",
-  readLess:    "Read less",
-};
-
-const PHASE_COLORS = ['#4a6741','#3d6b84','#7a6a3a','#5a5a8a','#3a7a5a','#8a4a5a'];
-
-// ── UTILS ─────────────────────────────────────────────────────────────────
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function renderBullets(items,showTech){
+  if(!items||!items.length)return'';
+  const li=items.filter(b=>showTech||!b.tech).map(b=>{
+    const badge=b.tech?`<span class="tech-badge">Tech</span> `:'';
+    return`<li class="${b.tech?'tech-item':''}">${badge}${esc(b.text)}</li>`;
+  }).join('');
+  return li?`<ul class="bullet-list">${li}</ul>`:'';
 }
 
-// ── RENDERERS (all template literals) ────────────────────────────────────
-function renderTeacher(items, prompts) {
-  const bullets = (items ?? []).map(it => it.tech
-    ? `<li class="tech-item"><span class="tech-badge">Tech</span> ${esc(it.text)}</li>`
-    : `<li>${esc(it.text)}</li>`
-  ).join('');
-  const promptBox = (prompts && prompts.length) ? `
-    <div class="prompts-box">
-      <div class="prompts-lbl">Teacher Prompts</div>
-      <ul class="prompts-list">${prompts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
-    </div>` : '';
-  return `<ul class="b-list">${bullets}</ul>${promptBox}`;
+function renderWhatIs(items){
+  if(!items||!items.length)return'';
+  let html='',inList=false;
+  const cl=()=>{if(inList){html+='</ul>';inList=false;}};
+  for(const item of items){
+    if(item.type==='image'){
+      cl();
+      html+=`<figure class="what-is-image"><img src="${item.src}" alt="Diagram">${item.caption?`<figcaption>${esc(item.caption)}</figcaption>`:''}</figure>`;
+    } else {
+      if(!inList){html+='<ul class="what-is-bullets">';inList=true;}
+      html+=`<li>${esc(item.text)}</li>`;
+    }
+  }
+  cl();return html;
 }
 
-function renderBullets(arr) {
-  if (!arr || !arr.length) return '';
-  return `<ul class="b-list">${arr.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
+function renderKeyQuestion(kq){
+  if(!kq)return'';
+  const colon=kq.indexOf(':');
+  let label=kq,body='';
+  if(colon>-1){
+    const full=kq.slice(0,colon+1);
+    const rest=kq.slice(colon+1).trim();
+    const sentEnd=rest.search(/[.?!]/);
+    if(sentEnd>-1){
+      label=full+' '+rest.slice(0,sentEnd+1);
+      body=rest.slice(sentEnd+1).trim();
+    } else {label=full;body=rest;}
+  }
+  return`<div class="key-question"><strong>${esc(label)}</strong>${esc(body)}</div>`;
 }
 
-function renderAims(aims) {
-  return (aims ?? []).map(a => {
-    const cls = a.tag.replace(/\s+/g, '-');
-    return `<div class="aim-item">
-      <span class="aim-tag ${cls}">${esc(a.tag)}</span>
-      <span class="aim-text">${esc(a.text)}</span>
+function renderLePreamble(items){
+  if(!items||!items.length)return'';
+  return`<div class="le-preamble"><ul>${items.map(i=>`<li>${esc(i.text)}</li>`).join('')}</ul></div>`;
+}
+
+function renderDiffPreamble(items){
+  if(!items||!items.length)return'';
+  return`<div class="diff-preamble"><ul>${items.map(i=>`<li>${esc(i.text)}</li>`).join('')}</ul></div>`;
+}
+
+function makeCell(html){
+  const count=(html.match(/<li/g)||[]).length;
+  const short=count<=3?' short':'';
+  return`<td><div class="cell-inner${short}">${html}${!short&&count>3?`<button class="read-more-btn" onclick="toggleCell(this)">Read more</button>`:''}</div></td>`;
+}
+
+function renderPhaseTable(pt,showTech){
+  if(!pt||!pt.rows||!pt.rows.length)return'';
+  const ths=pt.col_headers.map(h=>`<th>${esc(h)}</th>`).join('');
+  const trs=pt.rows.map(r=>{
+    const th=renderBullets(r.teacher,showTech);
+    const st=renderBullets(r.student,showTech);
+    return`<tr>
+      <td class="phase-label">${esc(r.phase)}</td>
+      ${makeCell(th)}${makeCell(st)}
+      ${r.aims!==undefined?`<td class="aims-cell">${esc(r.aims)}</td>`:''}
+    </tr>`;
+  }).join('');
+  return`<div class="phase-table-wrap"><table class="phase-tbl" cellspacing="0"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+
+function renderPhaseCards(pt,showTech){
+  if(!pt||!pt.rows||!pt.rows.length)return'';
+  const l2=pt.col_headers[pt.teacher_col]||"Teacher's Role";
+  const l3=pt.col_headers[pt.student_col]||"Students' Role";
+  const cards=pt.rows.map(r=>{
+    const th=renderBullets(r.teacher,showTech);
+    const st=renderBullets(r.student,showTech);
+    return`<div class="phase-card">
+      <h3>${esc(r.phase)}</h3>
+      ${th?`<div class="card-role">${esc(l2)}</div>${th}`:''}
+      ${st?`<div class="card-role">${esc(l3)}</div>${st}`:''}
+      ${r.aims?`<div class="card-role">3 Aims</div><p style="font-size:.78rem;color:var(--slate)">${esc(r.aims)}</p>`:''}
     </div>`;
   }).join('');
+  return`<div class="cards-grid">${cards}</div>`;
 }
 
-function colPanel(cls, label, inner) {
-  return `<div class="col-panel ${cls}">
-    <div class="col-hdr" onclick="toggleColPanel(this)">
-      <span class="col-dot"></span>
-      <span class="col-lbl">${label}</span>
-      <span class="col-chev">&#9660;</span>
-    </div>
-    <div class="col-content">${inner}</div>
-  </div>`;
-}
-
-function makeAccordion(id, title, body) {
-  return `<div class="accordion" id="${id}">
-    <div class="accordion-hdr" onclick="toggleAcc('${id}')">
-      <h2>${title}</h2><span class="acc-chev">&#9660;</span>
-    </div>
-    <div class="accordion-body">${body}</div>
-  </div>`;
-}
-
-// ── BUILD ONE APPROACH ────────────────────────────────────────────────────
-function buildApproach(key, data, contentId) {
-  const label = APPROACH_LABELS[key];
-
-  if (!data) {
-    document.getElementById(contentId).innerHTML = `
-      <div class="coming-soon-panel">
-        <div class="cs-icon">${label.icon}</div>
-        <h3>${label.name}</h3>
-        <p>Under development.</p>
-      </div>`;
-    return;
-  }
-
-  const w  = data.whatIs;
-  const le = data.leIntro;
-
-  // What is X?
-  const wBody = `
-    <p class="def-para">${esc(w.definition)}</p>
-    ${w.whenUseful && w.whenUseful.length ? `
-      <p class="sub-head">${esc(label.name)} is especially useful when the problem:</p>
-      <ul class="plain-list">${w.whenUseful.map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}
-    ${w.characteristicQuestions && w.characteristicQuestions.length ? `
-      <p class="sub-head">Characteristic questions:</p>
-      <ul class="q-list">${w.characteristicQuestions.map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}`;
-
-  // LE intro
-  const kqParas = (le.keyQuestionBody || '').split('\n\n').filter(Boolean);
-  const leBody = `
-    <ul class="seq-list">${(le.bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
-    <div class="key-q-box">
-      <div class="key-q-lbl">Key Question</div>
-      <div class="key-q-q">${esc(le.keyQuestion)}</div>
-      <div class="key-q-body">
-        <p>${esc(kqParas[0] || '')}</p>
-        <div class="key-q-more" id="${key}KqMore">
-          ${kqParas.slice(1).map(p => `<p>${esc(p)}</p>`).join('')}
-        </div>
-      </div>
-      <button class="key-q-btn" onclick="toggleKQ('${key}')">
-        <span id="${key}KqIco">&#9660;</span>
-        <span id="${key}KqTxt">${LABELS.readMore}</span>
-      </button>
-    </div>`;
-
-  // Phase table rows
-  const tableRows = (data.phases || []).map((ph, i) => `
-    <tr>
-      <td class="td-phase">
-        <div class="phase-num-badge" style="background:${PHASE_COLORS[i]}">${i+1}</div>
-        <div class="phase-label-name">${esc(ph.name)}</div>
-        ${ph.subtitle ? `<div class="phase-label-sub">${esc(ph.subtitle)}</div>` : ''}
-      </td>
-      <td><div class="cell-inner">${renderTeacher(ph.teacher, ph.teacher_prompts)}</div></td>
-      <td><div class="cell-inner">${renderBullets(ph.student)}</div></td>
-      <td><div class="cell-inner">${renderAims(ph.aims)}</div></td>
-    </tr>`).join('');
-
-  // Cards
-  const cards = (data.phases || []).map((ph, i) => `
-    <div class="phase-card" id="${key}pc${i}">
-      <div class="phase-card-hdr" onclick="toggleCard('${key}',${i})">
-        <div class="pc-num" style="background:${PHASE_COLORS[i]}">${i+1}</div>
-        <div class="pc-title">
-          <div class="pc-name">${esc(ph.name)}</div>
-          ${ph.subtitle ? `<div class="pc-sub">${esc(ph.subtitle)}</div>` : ''}
-        </div>
-        <span class="pc-chev">&#9654;</span>
-      </div>
-      <div class="phase-card-body">
-        ${colPanel('col-teacher', LABELS.teacherRole, renderTeacher(ph.teacher, ph.teacher_prompts))}
-        ${colPanel('col-student', LABELS.studentRole, renderBullets(ph.student))}
-        ${colPanel('col-aims',    LABELS.aims,        renderAims(ph.aims))}
-      </div>
-    </div>`).join('');
-
-  // Diff rows
-  const diffRows = (data.diffPhases || []).map((dp, i) => `
-    <tr>
-      <td class="td-phase">
-        <div class="phase-num-badge" style="background:${PHASE_COLORS[i]}">${i+1}</div>
-        <div class="phase-label-name">${esc(dp.name)}</div>
-      </td>
-      <td><div class="diff-cell">${renderBullets(dp.lower)}</div></td>
-      <td><div class="diff-cell">${renderBullets(dp.higher)}</div></td>
-    </tr>`).join('');
-
-  document.getElementById(contentId).innerHTML = `
-    ${makeAccordion(`${key}AccWhat`, `What is ${label.name}?`, wBody)}
-    ${makeAccordion(`${key}AccLe`, 'LE facilitated by a teacher in the classroom', leBody)}
-
-    <div class="phases-hdr">
-      <h2>Learning Sequence &#8212; Phases</h2>
-      <div class="phases-controls">
-        <button class="tech-toggle" id="${key}TechBtn" onclick="toggleTech('${key}')">
-          <span>&#128295;</span>
-          <span id="${key}TechLbl">${LABELS.techShow}</span>
-          <div class="toggle-track"><div class="toggle-thumb"></div></div>
-        </button>
-        <div class="view-switcher">
-          <button class="view-btn active" id="${key}BtnTable" onclick="setView('${key}','table')">&#9776;&nbsp;Table</button>
-          <button class="view-btn"        id="${key}BtnCards" onclick="setView('${key}','cards')">&#9647;&nbsp;Cards</button>
-        </div>
-        <button class="expand-toggle" id="${key}ExpandBtn" onclick="toggleExpand('${key}')">${LABELS.expandAll}</button>
-      </div>
-    </div>
-
-    <div id="${key}TableView">
-      <div class="phase-table-wrap">
-        <table class="phase-table" id="${key}PhaseTable">
-          <thead><tr>
-            <th class="col-phase">${LABELS.phase}</th>
-            <th class="col-teacher">${LABELS.teacherRole}</th>
-            <th class="col-student">${LABELS.studentRole}</th>
-            <th class="col-aims">${LABELS.aims}</th>
-          </tr></thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="${key}CardsView" class="phase-cards">${cards}</div>
-
-    <div class="diff-section" id="${key}DiffSec">
-      <div class="diff-hdr" onclick="toggleDiff('${key}')">
-        <h2>Differentiating Instruction for Students</h2>
-        <span class="acc-chev">&#9660;</span>
-      </div>
-      <div class="diff-body">
-        <p class="diff-intro">${esc(data.diffIntro || '')}</p>
-        <div class="diff-table-wrap">
-          <table class="diff-table" id="${key}DiffTable">
-            <thead><tr>
-              <th class="col-phase">${LABELS.phase}</th>
-              <th class="col-lower col-lower-th">${LABELS.lowerReady}</th>
-              <th class="col-higher col-higher-th">${LABELS.higherReady}</th>
-            </tr></thead>
-            <tbody>${diffRows}</tbody>
-          </table>
-        </div>
-      </div>
-    </div>`;
-}
-
-// ── INTERACTIONS ──────────────────────────────────────────────────────────
-document.querySelectorAll('.approach-tab').forEach(t => {
-  t.addEventListener('click', () => {
-    if (t.classList.contains('coming-soon')) return;
-    document.querySelectorAll('.approach-tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.approach-panel').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById(t.dataset.panel).classList.add('active');
+function renderDiffStandard(dt,key){
+  if(!dt||!dt.stages||!dt.stages.length)return'';
+  const phaseRows=((APPROACH_DATA[key].phase_table)||{}).rows||[];
+  const firstName=phaseRows.length?phaseRows[0].phase:'Stage 1';
+  const ths=dt.headers.map(h=>`<th>${esc(h)}</th>`).join('');
+  let rows='';
+  dt.stages.forEach((s,i)=>{
+    const name=s.stage===UNNAMED?firstName:s.stage;
+    if(dt.has_role_col){
+      rows+=`<tr>
+        <td class="diff-stage" rowspan="2">${esc(name)}</td>
+        <td class="diff-role">Teacher</td>
+        <td>${esc(s.teacher_lower||'')}</td>
+        <td>${esc(s.teacher_higher||'')}</td>
+      </tr><tr>
+        <td class="diff-role">Students</td>
+        <td>${esc(s.student_lower||'')}</td>
+        <td>${esc(s.student_higher||'')}</td>
+      </tr>`;
+    } else {
+      rows+=`<tr>
+        <td class="diff-stage">${esc(name)}</td>
+        <td>${esc(s.lower||'')}</td>
+        <td>${esc(s.higher||'')}</td>
+      </tr>`;
+    }
   });
-});
-
-function toggleAcc(id)       { document.getElementById(id).classList.toggle('open'); }
-function toggleColPanel(hdr) { hdr.closest('.col-panel').classList.toggle('closed'); }
-function toggleCard(key, i)  { document.getElementById(`${key}pc${i}`).classList.toggle('open'); }
-function toggleDiff(key)     { document.getElementById(`${key}DiffSec`).classList.toggle('open'); }
-
-function toggleTech(key) {
-  document.body.classList.toggle(`show-tech-${key}`);
-  const on = document.body.classList.contains(`show-tech-${key}`);
-  document.getElementById(`${key}TechBtn`).classList.toggle('on', on);
-  document.getElementById(`${key}TechLbl`).textContent = on ? LABELS.techHide : LABELS.techShow;
+  return`<div style="overflow-x:auto"><table class="diff-tbl" cellspacing="0"><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
-// Tech visibility per approach
-const styleEl = document.createElement('style');
-document.head.appendChild(styleEl);
-['pbl','ibl','cbl','ssi'].forEach(k => {
-  styleEl.sheet.insertRule(
-    `body.show-tech-${k} #${k}Content .tech-item { display: list-item; }`, 0
-  );
-});
-
-const expandState = {};
-function toggleExpand(key) {
-  expandState[key] = !expandState[key];
-  const on = expandState[key];
-  document.getElementById(`${key}PhaseTable`)?.classList.toggle('expanded', on);
-  document.getElementById(`${key}DiffTable`)?.classList.toggle('expanded', on);
-  const btn = document.getElementById(`${key}ExpandBtn`);
-  btn.textContent = on ? LABELS.collapseAll : LABELS.expandAll;
-  btn.classList.toggle('on', on);
+function renderDiffIBL(dt){
+  if(!dt||!dt.features||!dt.features.length)return'';
+  let rows='';
+  dt.features.forEach((f,fi)=>{
+    const ts=(f.teacher||[]).map(c=>`<td>${esc(c)}</td>`).join('');
+    const ss=(f.students||[]).map(c=>`<td>${esc(c)}</td>`).join('');
+    rows+=`<tr class="trow"><td class="fcell" rowspan="2">${esc(f.name)}</td><td class="rcell">Teacher</td>${ts}</tr>
+    <tr class="srow"><td class="rcell">Students</td>${ss}</tr>`;
+  });
+  return`<div style="overflow-x:auto"><table class="ibl-matrix" cellspacing="0">
+    <thead>
+      <tr>
+        <th class="fhdr" rowspan="2">Essential Feature</th>
+        <th class="rhdr" rowspan="2">Role</th>
+        <th class="lhdr" colspan="4">Extent of Guidance from Teacher &#8592; More &nbsp;&nbsp; Less &#8594;</th>
+      </tr>
+      <tr class="ibl-arrow-row">
+        <th>Highly structured</th><th>Guided</th><th>Structured inquiry</th><th>Open inquiry</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
 }
 
-const viewState = {};
-function setView(key, v) {
-  viewState[key] = v;
-  document.getElementById(`${key}TableView`).style.display = v === 'table' ? 'block' : 'none';
-  document.getElementById(`${key}CardsView`).classList.toggle('active', v === 'cards');
-  document.getElementById(`${key}BtnTable`).classList.toggle('active', v === 'table');
-  document.getElementById(`${key}BtnCards`).classList.toggle('active', v === 'cards');
-  document.getElementById(`${key}ExpandBtn`).style.display = v === 'table' ? '' : 'none';
+function renderDiff(key){
+  const dt=APPROACH_DATA[key].diff_table;
+  if(!dt)return'';
+  return dt.type==='ibl_matrix'?renderDiffIBL(dt):renderDiffStandard(dt,key);
 }
 
-function toggleKQ(key) {
-  const m    = document.getElementById(`${key}KqMore`);
-  const open = m.style.display === 'block';
-  m.style.display = open ? 'none' : 'block';
-  document.getElementById(`${key}KqIco`).innerHTML = open ? '&#9660;' : '&#9650;';
-  document.getElementById(`${key}KqTxt`).textContent = open ? LABELS.readMore : LABELS.readLess;
+function hasTech(key){
+  const pt=APPROACH_DATA[key].phase_table;
+  if(!pt)return false;
+  return pt.rows.some(r=>[...(r.teacher||[]),...(r.student||[])].some(b=>b.tech));
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────
-['pbl','ibl','cbl','ssi'].forEach(key => {
-  buildApproach(key, APPROACH_DATA[key], `${key}Content`);
-  // Mark tab as coming-soon if no data
-  if (!APPROACH_DATA[key]) {
-    document.querySelector(`[data-panel="${key}"]`).classList.add('coming-soon');
+function accordion(id,label,body){
+  return`<div class="accordion">
+    <button class="acc-btn" onclick="toggleAcc('${id}')">
+      <span>${label}</span><span class="acc-arrow">&#9660;</span>
+    </button>
+    <div class="acc-body" id="${id}">${body}</div>
+  </div>`;
+}
+
+function buildPanel(key){
+  const data=APPROACH_DATA[key];
+  const meta=APPROACH_META[key];
+  const showTech=true;
+
+  // Accordion 1: What is X?
+  const a1=accordion(`${key}-what`,`What is ${meta.name}?`,renderWhatIs(data.what_is||[]));
+
+  // Accordion 2: LE facilitated
+  let le='';
+  le+=renderKeyQuestion(data.key_question||null);
+  le+=renderLePreamble(data.le_preamble||[]);
+
+  const hasTable=!!(data.phase_table&&data.phase_table.rows&&data.phase_table.rows.length);
+  const ht=hasTech(key);
+
+  if(hasTable||ht){
+    let tb=`<div class="phase-toolbar">`;
+    if(hasTable){
+      tb+=`<button class="ctrl-btn active" id="${key}-bt" onclick="setView('${key}','table')">&#9776; Table</button>`;
+      tb+=`<button class="ctrl-btn" id="${key}-bc" onclick="setView('${key}','cards')">&#9783; Cards</button>`;
+    }
+    if(ht){
+      tb+=`<button class="ctrl-btn active" id="${key}-btech" onclick="toggleTech('${key}')">Show Tech</button>`;
+    }
+    if(hasTable){
+      tb+=`<button class="ctrl-btn" id="${key}-bexp" onclick="toggleExpandAll('${key}')">Expand all rows</button>`;
+    }
+    tb+=`</div>`;
+    le+=tb;
   }
+
+  if(hasTable){
+    le+=`<div id="${key}-view" class="view-table">`;
+    le+=renderPhaseTable(data.phase_table,showTech);
+    le+=renderPhaseCards(data.phase_table,showTech);
+    le+=`</div>`;
+  }
+  const a2=accordion(`${key}-le`,'LE facilitated by a teacher in the classroom',le);
+
+  // Accordion 3: Differentiating
+  let diff='';
+  diff+=renderDiffPreamble(data.diff_preamble||[]);
+  diff+=renderDiff(key);
+  const a3=accordion(`${key}-diff`,'Differentiating Instruction',diff);
+
+  return a1+a2+a3;
+}
+
+function setAccent(el,meta){
+  el.style.setProperty('--accent',`var(${meta.color})`);
+  el.style.setProperty('--accent-light',`var(${meta.light})`);
+  el.style.setProperty('--accent-mid',`var(${meta.mid})`);
+}
+
+function init(){
+  const panelsEl=document.getElementById('panels');
+  Object.keys(APPROACH_DATA).forEach(key=>{
+    const div=document.createElement('div');
+    div.className='panel';div.id=`panel-${key}`;
+    div.innerHTML=buildPanel(key);
+    panelsEl.appendChild(div);
+    setAccent(div,APPROACH_META[key]);
+  });
+  activateTab('pbl');
+}
+
+function activateTab(key){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.key===key));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${key}`));
+}
+
+document.querySelector('.tabs').addEventListener('click',e=>{
+  const btn=e.target.closest('.tab');
+  if(btn)activateTab(btn.dataset.key);
 });
+
+function toggleAcc(id){
+  const body=document.getElementById(id);
+  const btn=body.previousElementSibling;
+  const open=body.classList.toggle('open');
+  btn.classList.toggle('open',open);
+}
+
+function setView(key,mode){
+  const v=document.getElementById(`${key}-view`);if(!v)return;
+  v.className=`view-${mode}`;
+  document.getElementById(`${key}-bt`).classList.toggle('active',mode==='table');
+  document.getElementById(`${key}-bc`).classList.toggle('active',mode==='cards');
+}
+
+const expandState={};
+function toggleExpandAll(key){
+  const v=document.getElementById(`${key}-view`);
+  const btn=document.getElementById(`${key}-bexp`);
+  if(!v)return;
+  const exp=!expandState[key];expandState[key]=exp;
+  v.querySelectorAll('.cell-inner:not(.short)').forEach(c=>{
+    c.classList.toggle('expanded',exp);
+    const rb=c.querySelector('.read-more-btn');
+    if(rb)rb.textContent=exp?'Read less':'Read more';
+  });
+  btn.textContent=exp?'Collapse rows':'Expand all rows';
+  btn.classList.toggle('active',exp);
+}
+
+function toggleCell(btn){
+  const cell=btn.closest('.cell-inner');
+  const exp=cell.classList.toggle('expanded');
+  btn.textContent=exp?'Read less':'Read more';
+}
+
+function toggleTech(key){
+  const v=document.getElementById(`${key}-view`);
+  const btn=document.getElementById(`${key}-btech`);
+  if(!v)return;
+  const hiding=!v.classList.toggle('tech-hidden');
+  btn.classList.toggle('active',hiding);
+  btn.textContent=hiding?'Show Tech':'Hide Tech';
+}
+
+init();
 </script>
 </body>
 </html>
