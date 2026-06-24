@@ -1,363 +1,455 @@
+#!/usr/bin/env python3
 """
-build.py
-========
-Reads PBL.docx (and IBL/CBL/SSI when ready), parses content,
-and injects into template.html to produce pedagogy-hub.html.
-
-Usage:
-    python3 build.py
-
-Requirements:
-    pip install python-docx
+build.py – Flexible parser + adaptive data injector for pedagogy-hub.html
+Reads PBL.docx, IBL.docx, CBL.docx, SSI.docx and injects parsed JSON
+into template.html to produce pedagogy-hub.html.
 """
 
-import json, re
+import json
+import re
+import base64
+import os
 from pathlib import Path
 from docx import Document
+from docx.oxml.ns import qn
 
-# ── PATHS ─────────────────────────────────────────────────────────────────
-TEMPLATE   = Path('template.html')
-OUTPUT     = Path('pedagogy-hub.html')
+SCRIPT_DIR = Path(os.path.abspath(__file__)) .parent if '__file__' in dir() else Path('/home/claude')
 
-# Map approach key → docx path. Set to None when not yet available.
-DOCX_PATHS = {
-    'pbl': Path('PBL.docx'),
-    'ibl': Path('IBL.docx'),
-    'cbl': Path('CBL.docx'),
-    'ssi': Path('SSI.docx'),
+# ── helpers ───────────────────────────────────────────────────────────────
+
+UNICODE_MAP = {
+    '\u2018': "'", '\u2019': "'", '\u201c': '"', '\u201d': '"',
+    '\u2013': '-', '\u2014': '--', '\u2026': '...', '\u00a0': ' ',
+    '\uf0b7': '', '\uf0a7': '', '\uf020': '',
 }
 
-# ── SANITISE ──────────────────────────────────────────────────────────────
-def clean(s):
-    """Strip/normalise characters that cause rendering or JS problems."""
-    if not isinstance(s, str):
-        return s
-    # Smart quotes → straight
-    s = s.replace('\u2018', "'").replace('\u2019', "'")
-    s = s.replace('\u201c', '"').replace('\u201d', '"')
-    s = s.replace('\u201e', '"').replace('\u201f', '"')
-    s = s.replace('\u2032', "'").replace('\u2033', '"')
-    # Non-breaking space → regular space
-    s = s.replace('\xa0', ' ')
-    # Unicode bullet variants → remove (CSS supplies bullets)
-    for ch in (
-        '\u2022\u2023\u2024\u2025\u2026\u2027\u2043\u204c\u204d'
-        '\u25aa\u25ab\u25b8\u25b9\u25cf\u25e6'
-        '\u2192\u2193\u2190\u2194\u21b2'
-        '\u25ba\u25b6\u25c0\u25c4'
-        '\uf0b7\uf0d8\uf0a7\u00b7'
-    ):
-        s = s.replace(ch, '')
-    # Private Use Area → strip
-    s = re.sub(r'[\ue000-\uf8ff]', '', s)
-    # Control characters (keep tab and newline)
-    s = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', s)
-    # Caret + control sequences
-    s = re.sub(r'\^[\x00-\x1f\x40-\x5f]', '', s)
-    # Collapse whitespace within a line
-    s = re.sub(r'[^\S\n]+', ' ', s)
-    return s.strip()
+def clean(text):
+    if not text:
+        return ''
+    for src, dst in UNICODE_MAP.items():
+        text = text.replace(src, dst)
+    text = re.sub(r'[\ue000-\uf8ff]', '', text)
+    # collapse multiple spaces/newlines
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
 
-# ── DOCX PARSER ───────────────────────────────────────────────────────────
+def para_text(p):
+    return clean(''.join(run.text or '' for run in p.runs))
 
-def cell_paragraphs(cell):
-    """Return non-empty cleaned paragraph texts from a table cell."""
-    return [clean(p.text) for p in cell.paragraphs if p.text.strip()]
+def is_tech(p):
+    t = para_text(p)
+    return bool(re.match(r'^\(Tech\)', t, re.IGNORECASE))
 
-def parse_teacher_cell(cell):
-    """
-    Parse teacher cell paragraphs into:
-      - teacher: list of {tech: bool, text: str}
-      - teacher_prompts: list of str
+def strip_tech_prefix(t):
+    return re.sub(r'^\(Tech\)\s*', '', t, flags=re.IGNORECASE).strip()
 
-    Rules (derived from actual docx structure):
-      - Paragraphs starting with '(Tech)' → tech bullet
-      - Paragraphs that are quoted strings (start with " or ") following
-        a 'Use prompts such as:' line → prompts
-      - Everything else → normal bullet
-    """
-    paras = cell_paragraphs(cell)
-    teacher = []
-    prompts = []
-    prompt_mode = False
+def para_style(p):
+    return (p.style.name or '').strip()
 
-    for p in paras:
-        # Tech bullet
-        if p.startswith('(Tech)'):
-            prompt_mode = False
-            text = clean(p[len('(Tech)'):].strip())
-            if text:
-                teacher.append({'tech': True, 'text': text})
-            continue
+def has_image(p):
+    return bool(p._element.findall('.//' + qn('a:blip')))
 
-        # Prompt trigger line
-        if re.search(r'use prompts such as', p, re.IGNORECASE):
-            prompt_mode = True
-            # Extract anything after the colon on the same line
-            after = re.split(r'use prompts such as\s*[:\-]?\s*', p, flags=re.IGNORECASE)[-1].strip()
-            if after:
-                prompts.append(clean(after))
-            continue
+def extract_image_b64(p, docx_path):
+    blips = p._element.findall('.//' + qn('a:blip'))
+    if not blips:
+        return None
+    rId = blips[0].get(qn('r:embed'))
+    if not rId:
+        return None
+    doc2 = Document(docx_path)
+    for rel in doc2.part.rels.values():
+        if rel.reltype.endswith('/image') and rel.rId == rId:
+            image_bytes = rel.target_part.blob
+            b64 = base64.b64encode(image_bytes).decode('utf-8')
+            mime = 'image/png' if image_bytes[:4] == b'\x89PNG' else 'image/jpeg'
+            return f'data:{mime};base64,{b64}'
+    return None
 
-        # Quoted line → prompt
-        if prompt_mode and (p.startswith('"') or p.startswith('\u201c')):
-            prompts.append(clean(p.strip('""\u201c\u201d')))
-            continue
+# ── table cell helpers ────────────────────────────────────────────────────
 
-        # Tech continuation paragraph (belongs to previous Tech bullet)
-        # e.g. "Teachers can also bring students..." after a Tech line
-        if teacher and teacher[-1]['tech'] and not p.startswith('(Tech)'):
-            # Check: does this look like a standalone normal bullet?
-            # Heuristic: starts with a verb or capital → new bullet
-            # Otherwise append to previous tech item
-            if not re.match(r'^[A-Z][a-z]', p):
-                teacher[-1]['text'] += ' ' + p
-                continue
-
-        # Normal bullet
-        prompt_mode = False
-        if p:
-            teacher.append({'tech': False, 'text': p})
-
-    return teacher, prompts
-
-
-def parse_aims_cell(cell):
-    """
-    Parse aims cell into list of {tag: str, text: str}.
-    Tags are [Appreciate], [Understand], [Take Action] at start of paragraph.
-    """
-    aims = []
-    tag_re = re.compile(r'^\[([^\]]+)\]\s*(.*)', re.DOTALL)
-    for p in cell_paragraphs(cell):
-        m = tag_re.match(p)
-        if m:
-            aims.append({'tag': clean(m.group(1)), 'text': clean(m.group(2))})
-        elif aims:
-            # Continuation of previous aim
-            aims[-1]['text'] += ' ' + clean(p)
-    return aims
-
-
-def parse_student_cell(cell):
-    return [t for t in cell_paragraphs(cell) if t]
-
-
-def parse_phase_cell(cell):
-    """Return (name, subtitle) from phase cell."""
-    lines = [clean(l) for l in cell.text.split('\n') if clean(l)]
-    name     = lines[0] if lines else ''
-    subtitle = lines[1] if len(lines) > 1 else ''
-    return name, subtitle
-
-
-def parse_docx(path):
-    """
-    Parse a pedagogical approach .docx and return a data dict
-    compatible with template.html.
-    """
-    doc = Document(path)
-
-    # ── Identify tables by size ──────────────────────────────────────────
-    key_q_table   = None
-    phase_table   = None
-    diff_table    = None
-
-    for t in doc.tables:
-        cols = len(t.columns)
-        rows = len(t.rows)
-        header = t.rows[0].cells[0].text.strip()
-        if cols == 1 and rows == 1:
-            key_q_table = t
-        elif cols == 4 and rows > 1:
-            phase_table = t
-        elif cols == 3 and rows > 1 and header.lower() not in ('phase', 'pbl phase'):
-            diff_table = t
-        elif cols == 3 and rows > 1:
-            diff_table = t
-
-    # ── Pre-table paragraphs ─────────────────────────────────────────────
-    # Walk body elements to collect paragraphs before the first table
-    from docx.oxml.ns import qn
-    what_is_bullets    = []
-    when_useful        = []
-    char_questions     = []
-    le_bullets         = []
-
-    section = None   # 'what' | 'le'
-    subsection = None  # 'when' | 'q' | None
-
-    for elem in doc.element.body:
-        tag = elem.tag.split('}')[-1]
-        if tag == 'tbl':
-            break
-        if tag != 'p':
-            continue
-        from docx.text.paragraph import Paragraph
-        p = Paragraph(elem, doc)
-        t = clean(p.text)
+def cell_bullets(cell):
+    """Return list of {text, tech} dicts for each non-empty paragraph in a cell."""
+    bullets = []
+    for p in cell.paragraphs:
+        t = para_text(p)
         if not t:
             continue
-        style = p.style.name
+        tech = is_tech(p)
+        bullets.append({'text': strip_tech_prefix(t) if tech else t, 'tech': tech})
+    return bullets
 
-        # Section detection
-        if style == 'Title' and re.search(r'what is', t, re.IGNORECASE):
-            section = 'what'
+def cell_plain(cell):
+    return clean(cell.text)
+
+# ── phase table ───────────────────────────────────────────────────────────
+
+def parse_phase_table(tbl):
+    rows = tbl.rows
+    if not rows:
+        return None
+
+    # Header row
+    col_headers = [cell_plain(c) for c in rows[0].cells]
+    n_cols = len(col_headers)
+
+    # Detect column roles by header text
+    teacher_col = next((i for i, h in enumerate(col_headers) if 'teacher' in h.lower()), 1)
+    student_col = next((i for i, h in enumerate(col_headers) if 'student' in h.lower()), 2)
+    aims_col    = next((i for i, h in enumerate(col_headers)
+                        if any(k in h.lower() for k in ['align', 'aim', 'relev'])),
+                       n_cols - 1 if n_cols > 3 else None)
+
+    parsed_rows = []
+    prev_phase = ''
+
+    for row in rows[1:]:
+        cells = row.cells
+        if not cells:
             continue
-        if style in ('Heading 1', 'Heading 2') and re.search(r'le facilitated|learning experience', t, re.IGNORECASE):
-            section = 'le'
-            subsection = None
+
+        phase_raw = cell_plain(cells[0])
+        # Build phase label: combine multi-line cell text cleanly
+        phase_label = re.sub(r'\s+', ' ', phase_raw).strip()
+        # Remove numeric prefix like "4. " from IBL
+        phase_label = re.sub(r'^\d+\.\s*', '', phase_label)
+
+        # Skip header-repeat rows or empty rows
+        if not any(cell_plain(c) for c in cells):
             continue
 
-        if section == 'what':
-            tl = t.lower()
-            if 'especially useful' in tl or 'useful when' in tl:
-                subsection = 'intro_when'
-                what_is_bullets.append(t)
-                continue
-            if 'following questions' in tl or 'characteristic' in tl:
-                subsection = 'q'
-                what_is_bullets.append(t)
-                continue
-            if subsection == 'intro_when' and not t[0].isupper():
-                when_useful.append(t.rstrip(';').rstrip('.'))
-                continue
-            if subsection == 'intro_when' and t[0].isupper():
-                subsection = None
-            if subsection == 'q':
-                char_questions.append(t.strip('""\u201c\u201d'))
-                continue
-            what_is_bullets.append(t)
+        teacher_bullets = cell_bullets(cells[teacher_col]) if teacher_col < len(cells) else []
+        student_bullets = cell_bullets(cells[student_col]) if student_col < len(cells) else []
+        aims_text       = cell_plain(cells[aims_col]) if aims_col is not None and aims_col < len(cells) else ''
 
-        elif section == 'le':
-            le_bullets.append(t)
-
-    # ── Key question ────────────────────────────────────────────────────────────────────────
-    key_question = ''
-    key_question_body = ''
-    if key_q_table:
-        # Split cell into non-empty lines; question is the first content
-        # line after the 'Key Question:' label; rest are body paragraphs.
-        lines_kq = [clean(l) for l in key_q_table.rows[0].cells[0].text.split('\n') if clean(l)]
-        q_lines, body_lines, found_q = [], [], False
-        for line in lines_kq:
-            if re.match(r'key question', line, re.IGNORECASE):
-                after = re.sub(r'^key question\s*[:\-]?\s*', '', line, flags=re.IGNORECASE).strip()
-                if after:
-                    q_lines.append(after)
-                found_q = True
-            elif found_q and not q_lines:
-                q_lines.append(line)
-            elif found_q:
-                body_lines.append(line)
-        key_question      = ' '.join(q_lines)
-        key_question_body = '\n\n'.join(body_lines)
-
-    # ── Phase table ───────────────────────────────────────────────────────
-    phases = []
-    if phase_table:
-        for row in phase_table.rows[1:]:
-            cells = row.cells
-            if len(cells) < 4:
-                continue
-            name, subtitle = parse_phase_cell(cells[0])
-            if not name:
-                continue
-            teacher, prompts = parse_teacher_cell(cells[1])
-            student          = parse_student_cell(cells[2])
-            aims             = parse_aims_cell(cells[3])
-            phases.append({
-                'name':            name,
-                'subtitle':        subtitle,
-                'teacher':         teacher,
-                'teacher_prompts': prompts,
-                'student':         student,
-                'aims':            aims,
-            })
-
-    # ── Diff table ────────────────────────────────────────────────────────
-    diff_phases = []
-    diff_intro  = ''
-    if diff_table:
-        for row in diff_table.rows[1:]:
-            cells = row.cells
-            if len(cells) < 3:
-                continue
-            name = clean(cells[0].text.split('\n')[0])
-            if not name:
-                continue
-            lower  = [t for t in cell_paragraphs(cells[1]) if t]
-            higher = [t for t in cell_paragraphs(cells[2]) if t]
-            diff_phases.append({'name': name, 'lower': lower, 'higher': higher})
-
-    # ── Diff intro (paragraphs between Heading 2 and diff table) ─────────
-    found_diff_heading = False
-    diff_intro_lines   = []
-    for elem in doc.element.body:
-        tag = elem.tag.split('}')[-1]
-        if tag == 'tbl':
-            if found_diff_heading:
-                break
+        # Skip rows that are just header labels repeated
+        if phase_label and not teacher_bullets and not student_bullets and not aims_text:
             continue
-        if tag != 'p':
-            continue
-        from docx.text.paragraph import Paragraph
-        p = Paragraph(elem, doc)
-        t = clean(p.text)
-        if not t:
-            continue
-        if p.style.name in ('Heading 1','Heading 2') and 'differentiat' in t.lower():
-            found_diff_heading = True
-            continue
-        if found_diff_heading:
-            diff_intro_lines.append(t)
-    diff_intro = ' '.join(diff_intro_lines)
 
-    # ── Assemble definition ───────────────────────────────────────────────
-    # First bullet under "What is X?" is the definition paragraph
-    definition = ''
-    remaining_what = []
-    for b in what_is_bullets:
-        bl = b.lower()
-        if not definition and len(b) > 80 and 'especially useful' not in bl and 'following questions' not in bl:
-            definition = b
-        else:
-            remaining_what.append(b)
+        parsed_rows.append({
+            'phase':   phase_label,
+            'teacher': teacher_bullets,
+            'student': student_bullets,
+            'aims':    aims_text,
+        })
 
     return {
-        'whatIs': {
-            'definition':           definition,
-            'whenUseful':           when_useful,
-            'characteristicQuestions': char_questions,
-        },
-        'leIntro': {
-            'bullets':          le_bullets,
-            'keyQuestion':      key_question,
-            'keyQuestionBody':  key_question_body,
-        },
-        'diffIntro':   diff_intro,
-        'phases':      phases,
-        'diffPhases':  diff_phases,
+        'col_headers': col_headers,
+        'teacher_col': teacher_col,
+        'student_col': student_col,
+        'aims_col':    aims_col,
+        'rows':        parsed_rows,
     }
 
+# ── diff table ────────────────────────────────────────────────────────────
 
-# ── BUILD ─────────────────────────────────────────────────────────────────
-def build():
-    template = TEMPLATE.read_text(encoding='utf-8')
+def parse_diff_table_standard(tbl, has_role_col=False):
+    """PBL (3-col), SSI (3-col), CBL (4-col with Role)."""
+    rows = tbl.rows
+    if not rows:
+        return {'type': 'standard', 'headers': [], 'stages': [], 'has_role_col': has_role_col}
 
-    for key, docx_path in DOCX_PATHS.items():
-        placeholder = f'__{key.upper()}_DATA__'
-        if docx_path and docx_path.exists():
-            print(f'Parsing {docx_path.name}...')
-            data = parse_docx(docx_path)
-            template = template.replace(placeholder, json.dumps(data, ensure_ascii=False))
-            print(f'  {len(data["phases"])} phases, {len(data["diffPhases"])} diff phases')
+    headers = [cell_plain(c) for c in rows[0].cells]
+    n_cols  = len(headers)
+
+    stage_col  = 0
+    lower_col  = next((i for i, h in enumerate(headers) if 'lower'  in h.lower()), 1)
+    higher_col = next((i for i, h in enumerate(headers) if 'higher' in h.lower()), 2)
+    role_col   = next((i for i, h in enumerate(headers) if h.lower() == 'role'), None)
+
+    stages = []
+
+    # SSI has an empty Stage cell in row 1 for "Encountering a Focal Issue"
+    # We need to infer the stage name from the phase table if possible.
+    # Strategy: if first data row has no stage label, use a sentinel.
+    UNNAMED = '__UNNAMED__'
+
+    for row in rows[1:]:
+        cells = row.cells
+        if not cells or not any(cell_plain(c) for c in cells):
+            continue
+
+        stage_val  = cell_plain(cells[stage_col]) if stage_col < len(cells) else ''
+        lower_val  = cell_plain(cells[lower_col])  if lower_col  < len(cells) else ''
+        higher_val = cell_plain(cells[higher_col]) if higher_col < len(cells) else ''
+        role_val   = cell_plain(cells[role_col])   if role_col is not None and role_col < len(cells) else None
+
+        if role_col is not None:
+            # CBL: Stage / Role / Lower / Higher
+            if stage_val and (not stages or stage_val != stages[-1]['stage']):
+                stages.append({'stage': stage_val, 'teacher_lower': '', 'teacher_higher': '',
+                               'student_lower': '', 'student_higher': ''})
+            if stages:
+                if role_val and 'teacher' in role_val.lower():
+                    stages[-1]['teacher_lower']  = lower_val
+                    stages[-1]['teacher_higher'] = higher_val
+                elif role_val and 'student' in role_val.lower():
+                    stages[-1]['student_lower']  = lower_val
+                    stages[-1]['student_higher'] = higher_val
         else:
-            template = template.replace(placeholder, 'null')
-            print(f'{key.upper()}: no docx — placeholder set to null')
+            # PBL / SSI: Stage / Lower / Higher
+            if stage_val:
+                stages.append({'stage': stage_val, 'lower': lower_val, 'higher': higher_val})
+            else:
+                # row with no stage label — start new unnamed stage if first, else append
+                if not stages:
+                    stages.append({'stage': UNNAMED, 'lower': lower_val, 'higher': higher_val})
+                else:
+                    stages[-1]['lower']  = (stages[-1].get('lower','')  + ' ' + lower_val).strip()
+                    stages[-1]['higher'] = (stages[-1].get('higher','') + ' ' + higher_val).strip()
 
-    OUTPUT.write_text(template, encoding='utf-8')
-    print(f'\nBuilt: {OUTPUT} ({len(template):,} chars)')
+    return {
+        'type':         'standard',
+        'headers':      headers,
+        'stages':       stages,
+        'has_role_col': role_col is not None,
+        'unnamed_sentinel': UNNAMED,
+    }
+
+def parse_diff_table_ibl(tbl):
+    """IBL 6-col two-axis matrix. Columns: Feature | Role | [4 guidance levels]."""
+    rows = tbl.rows
+    if not rows:
+        return {'type': 'ibl_matrix', 'features': []}
+
+    features = []
+    seen_features = {}  # name -> index in features
+
+    for row in rows[2:]:  # skip two header rows
+        cells = row.cells
+        if len(cells) < 6:
+            continue
+
+        feature_val = clean(cells[0].text)
+        role_val    = clean(cells[1].text)
+        level_cells = [clean(cells[i].text) for i in range(2, 6)]
+
+        if not feature_val and not role_val:
+            continue
+
+        if feature_val and feature_val not in seen_features:
+            seen_features[feature_val] = len(features)
+            features.append({'name': feature_val, 'teacher': [], 'students': []})
+
+        feat_idx = seen_features.get(feature_val, len(features) - 1)
+        if feat_idx >= len(features):
+            continue
+
+        if 'teacher' in role_val.lower():
+            features[feat_idx]['teacher'] = level_cells
+        elif 'student' in role_val.lower():
+            features[feat_idx]['students'] = level_cells
+
+    return {'type': 'ibl_matrix', 'features': features}
+
+# ── "What is X?" ──────────────────────────────────────────────────────────
+
+def parse_what_is(doc, docx_path):
+    items = []
+    in_what_is = False
+    body = doc.element.body
+
+    end_markers = ['le facilitated', 'learning experience (le) in the classroom']
+
+    for child in body:
+        tag = child.tag.split('}')[-1]
+
+        if tag == 'p':
+            from docx.text.paragraph import Paragraph as DocxPara
+            p = DocxPara(child, doc)
+            text  = para_text(p)
+            style = para_style(p)
+            tl    = text.lower()
+
+            if 'what is' in tl and any(s in style for s in ('Title', 'Heading', 'Normal')):
+                in_what_is = True
+                continue
+
+            if in_what_is:
+                if any(m in tl for m in end_markers) and ('Heading' in style or 'Title' in style):
+                    break
+                if not text and not has_image(p):
+                    continue
+                if has_image(p):
+                    src = extract_image_b64(p, docx_path)
+                    if src:
+                        # caption text may be in same paragraph
+                        caption = re.sub(r'^\.\s*', '', text).strip()
+                        items.append({'type': 'image', 'src': src, 'caption': caption})
+                    continue
+                if 'Caption' in style:
+                    # standalone caption after image — attach to last image if present
+                    if items and items[-1]['type'] == 'image' and not items[-1]['caption']:
+                        items[-1]['caption'] = re.sub(r'^\.\s*', '', text).strip()
+                    continue
+                items.append({'type': 'bullet', 'text': text, 'tech': is_tech(p)})
+
+        elif tag == 'tbl' and in_what_is:
+            from docx.table import Table as DocxTable
+            tbl = DocxTable(child, doc)
+            rows = tbl.rows
+            if not rows:
+                continue
+            # IBL component table: flatten to numbered bullets
+            headers = [clean(c.text) for c in rows[0].cells]
+            if len(headers) == 2 and headers[0].lower() in ('component', ''):
+                for row in rows[1:]:
+                    num      = clean(row.cells[0].text)
+                    activity = clean(row.cells[1].text)
+                    if num and activity:
+                        items.append({'type': 'bullet', 'text': f'{num}. {activity}', 'tech': False})
+            # other tables in what_is: skip
+
+    return items
+
+# ── LE preamble ───────────────────────────────────────────────────────────
+
+def parse_le_preamble(doc):
+    items = []
+    in_le = False
+    body = doc.element.body
+
+    le_markers = ['le facilitated', 'learning experience (le) in the classroom']
+
+    for child in body:
+        tag = child.tag.split('}')[-1]
+
+        if tag == 'p':
+            from docx.text.paragraph import Paragraph as DocxPara
+            p = DocxPara(child, doc)
+            text  = para_text(p)
+            style = para_style(p)
+            tl    = text.lower()
+
+            if any(m in tl for m in le_markers):
+                in_le = True
+                continue
+
+            if in_le:
+                if ('Heading' in style or 'Title' in style) and text:
+                    break
+                if not text:
+                    continue
+                items.append({'text': text, 'tech': is_tech(p)})
+
+        elif tag == 'tbl' and in_le:
+            break
+
+    return items
+
+# ── Key Question ──────────────────────────────────────────────────────────
+
+def parse_key_question(doc):
+    for tbl in doc.tables:
+        if tbl.rows and tbl.columns:
+            text = clean(tbl.rows[0].cells[0].text)
+            if text.lower().startswith('key question'):
+                return text
+    return None
+
+# ── Diff preamble ─────────────────────────────────────────────────────────
+
+def parse_diff_preamble(doc):
+    items = []
+    in_diff = False
+    body = doc.element.body
+
+    for child in body:
+        tag = child.tag.split('}')[-1]
+
+        if tag == 'p':
+            from docx.text.paragraph import Paragraph as DocxPara
+            p = DocxPara(child, doc)
+            text  = para_text(p)
+            style = para_style(p)
+
+            if 'differentiating' in text.lower() and 'Heading' in style:
+                in_diff = True
+                continue
+
+            if in_diff:
+                if not text:
+                    continue
+                items.append({'text': text})
+
+        elif tag == 'tbl' and in_diff:
+            break
+
+    return items
+
+# ── Per-doc orchestrator ──────────────────────────────────────────────────
+
+def parse_doc(docx_path, approach_key):
+    doc = Document(docx_path)
+    data = {}
+
+    data['what_is']    = parse_what_is(doc, docx_path)
+    data['le_preamble']= parse_le_preamble(doc)
+    data['diff_preamble'] = parse_diff_preamble(doc)
+
+    kq = parse_key_question(doc)
+    if kq:
+        data['key_question'] = kq
+
+    tables = list(doc.tables)
+
+    if approach_key == 'pbl':
+        phase_tbl = tables[1] if len(tables) > 1 else None
+        diff_tbl  = tables[2] if len(tables) > 2 else None
+    elif approach_key == 'ibl':
+        phase_tbl = tables[1] if len(tables) > 1 else None
+        diff_tbl  = tables[2] if len(tables) > 2 else None
+    else:
+        phase_tbl = tables[0] if len(tables) > 0 else None
+        diff_tbl  = tables[1] if len(tables) > 1 else None
+
+    if phase_tbl:
+        data['phase_table'] = parse_phase_table(phase_tbl)
+
+    if diff_tbl:
+        if approach_key == 'ibl':
+            data['diff_table'] = parse_diff_table_ibl(diff_tbl)
+        else:
+            has_role = (approach_key == 'cbl')
+            data['diff_table'] = parse_diff_table_standard(diff_tbl, has_role_col=has_role)
+
+    return data
+
+# ── Main ──────────────────────────────────────────────────────────────────
+
+def main():
+    docs = {
+        'pbl': SCRIPT_DIR / 'PBL.docx',
+        'ibl': SCRIPT_DIR / 'IBL.docx',
+        'cbl': SCRIPT_DIR / 'CBL.docx',
+        'ssi': SCRIPT_DIR / 'SSI.docx',
+    }
+
+    approach_data = {}
+    for key, path in docs.items():
+        if not path.exists():
+            print(f'WARNING: {path} not found, skipping {key.upper()}')
+            approach_data[key] = {}
+            continue
+        print(f'Parsing {path.name}...')
+        approach_data[key] = parse_doc(str(path), key)
+        print(f'  Done: {key}')
+
+    template_path = SCRIPT_DIR / 'template.html'
+    output_path   = SCRIPT_DIR / 'pedagogy-hub.html'
+
+    if not template_path.exists():
+        print(f'ERROR: template.html not found at {template_path}')
+        return
+
+    template = template_path.read_text(encoding='utf-8')
+
+    for key, data in approach_data.items():
+        placeholder = f'__{key.upper()}_DATA__'
+        json_str    = json.dumps(data, ensure_ascii=False)
+        template    = template.replace(placeholder, json_str)
+
+    output_path.write_text(template, encoding='utf-8')
+    print(f'\nOutput written to {output_path}')
 
 if __name__ == '__main__':
-    build()
+    main()
