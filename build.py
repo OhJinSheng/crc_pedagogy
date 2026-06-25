@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-build.py – Flexible parser + adaptive data injector for pedagogy-hub.html
-"""
+"""build.py – Flexible parser + adaptive data injector for pedagogy-hub.html"""
 
 import json, re, base64, os
 from pathlib import Path
@@ -11,7 +9,6 @@ from lxml import etree
 
 SCRIPT_DIR = Path(os.path.abspath(__file__)).parent if '__file__' in dir() else Path('/home/claude')
 
-# ── unicode cleanup ────────────────────────────────────────────────────────
 UNICODE_MAP = {
     '\u2018':"'",'\u2019':"'",'\u201c':'"','\u201d':'"',
     '\u2013':'-','\u2014':'--','\u2026':'...','\u00a0':' ',
@@ -53,16 +50,13 @@ def extract_image_b64(p, docx_path):
             return f'data:{mime};base64,{b64}'
     return None
 
-# ── numbering lookup ───────────────────────────────────────────────────────
 def build_numbering_lookup(doc):
-    """Returns (abstract, num_to_abstract) for resolving bullet chars."""
     numbering_part = None
     for rel in doc.part.rels.values():
         if 'numbering' in rel.reltype:
             numbering_part = rel.target_part
             break
-    if not numbering_part:
-        return {}, {}
+    if not numbering_part: return {}, {}
     ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
     root = etree.fromstring(numbering_part.blob)
     abstract = {}
@@ -83,46 +77,26 @@ def build_numbering_lookup(doc):
     return abstract, num_to_abstract
 
 def get_bullet_level(p, abstract, num_to_abstract):
-    """
-    Returns indent level (0 or 1) for a paragraph.
-    Strategy:
-      1. ilvl from numPr -> primary signal
-      2. For CBL-style (ilvl=0 but high ind): use raw ind threshold
-    """
     numPr = p._element.find('.//' + qn('w:numPr'))
-    ilvl_val = 0
-    numId_val = None
+    ilvl_val = 0; numId_val = None
     if numPr is not None:
         ilvl_el = numPr.find(qn('w:ilvl'))
         numId_el = numPr.find(qn('w:numId'))
-        if ilvl_el is not None:
-            ilvl_val = int(ilvl_el.get(qn('w:val'), '0'))
-        if numId_el is not None:
-            numId_val = numId_el.get(qn('w:val'))
-
-    # If ilvl already signals sub-level, trust it
-    if ilvl_val >= 1:
-        return 1
-
-    # Resolve bullet char from numbering def — "o" = hollow = sub-level
+        if ilvl_el is not None: ilvl_val = int(ilvl_el.get(qn('w:val'),'0'))
+        if numId_el is not None: numId_val = numId_el.get(qn('w:val'))
+    if ilvl_val >= 1: return 1
     if numId_val and numId_val in num_to_abstract:
         abId = num_to_abstract[numId_val]
-        char = abstract.get(abId, {}).get(str(ilvl_val), '')
-        if char == 'o':
-            return 1
-
-    # CBL fallback: raw ind >= 400 twips = sub-level
+        char = abstract.get(abId,{}).get(str(ilvl_val),'')
+        if char == 'o': return 1
     pPr = p._element.find(qn('w:pPr'))
     if pPr is not None:
         ind = pPr.find(qn('w:ind'))
         if ind is not None:
             ind_left = ind.get(qn('w:left'))
-            if ind_left and int(ind_left) >= 400:
-                return 1
-
+            if ind_left and int(ind_left) >= 400: return 1
     return 0
 
-# ── cell bullet extraction ─────────────────────────────────────────────────
 def cell_bullets(cell, abstract, num_to_abstract):
     bullets = []
     for p in cell.paragraphs:
@@ -130,15 +104,49 @@ def cell_bullets(cell, abstract, num_to_abstract):
         if not t: continue
         tech = is_tech(p)
         level = get_bullet_level(p, abstract, num_to_abstract)
-        bullets.append({
-            'text': strip_tech(t) if tech else t,
-            'tech': tech,
-            'level': level,
-        })
+        bullets.append({'text': strip_tech(t) if tech else t, 'tech': tech, 'level': level})
     return bullets
 
 def cell_plain(cell):
     return clean(cell.text)
+
+# ── aims cell parser ───────────────────────────────────────────────────────
+TAG_RE = re.compile(r'^\[([^\]]+)\]')
+
+def parse_aims_cell(cell):
+    """
+    Parse the aims cell into a list of aim blocks:
+    [{'tag': 'Understand', 'text': 'Students deepen...'}, ...]
+    Handles both single-para (tag + text on same line) and
+    multi-para (tag on own para, text on following paras) formats.
+    """
+    paras = [clean(p.text) for p in cell.paragraphs]
+    paras = [p for p in paras if p]  # drop empty
+
+    blocks = []
+    current_tag = None
+    current_lines = []
+
+    def flush():
+        if current_tag is not None:
+            blocks.append({'tag': current_tag, 'text': ' '.join(current_lines).strip()})
+
+    for para in paras:
+        m = TAG_RE.match(para)
+        if m:
+            flush()
+            current_tag = m.group(1).strip()
+            rest = para[m.end():].strip()
+            current_lines = [rest] if rest else []
+        else:
+            if current_tag is not None:
+                current_lines.append(para)
+            else:
+                # text before any tag — unlikely but safe
+                blocks.append({'tag': None, 'text': para})
+
+    flush()
+    return blocks if blocks else None
 
 # ── phase table ────────────────────────────────────────────────────────────
 def parse_phase_table(tbl, abstract, num_to_abstract):
@@ -160,9 +168,15 @@ def parse_phase_table(tbl, abstract, num_to_abstract):
         phase_label = re.sub(r'^\d+\.\s*','',phase_label)
         teacher_bullets = cell_bullets(cells[teacher_col],abstract,num_to_abstract) if teacher_col<len(cells) else []
         student_bullets = cell_bullets(cells[student_col],abstract,num_to_abstract) if student_col<len(cells) else []
-        aims_text = cell_plain(cells[aims_col]) if aims_col is not None and aims_col<len(cells) else ''
-        if phase_label and not teacher_bullets and not student_bullets and not aims_text: continue
-        parsed_rows.append({'phase':phase_label,'teacher':teacher_bullets,'student':student_bullets,'aims':aims_text})
+        # aims: parse into structured blocks
+        aims_blocks = parse_aims_cell(cells[aims_col]) if aims_col is not None and aims_col<len(cells) else None
+        if phase_label and not teacher_bullets and not student_bullets and not aims_blocks: continue
+        parsed_rows.append({
+            'phase': phase_label,
+            'teacher': teacher_bullets,
+            'student': student_bullets,
+            'aims': aims_blocks,
+        })
     return {'col_headers':col_headers,'teacher_col':teacher_col,'student_col':student_col,'aims_col':aims_col,'rows':parsed_rows}
 
 # ── diff tables ────────────────────────────────────────────────────────────
@@ -173,8 +187,7 @@ def parse_diff_table_standard(tbl):
     lower_col  = next((i for i,h in enumerate(headers) if 'lower'  in h.lower()),1)
     higher_col = next((i for i,h in enumerate(headers) if 'higher' in h.lower()),2)
     role_col   = next((i for i,h in enumerate(headers) if h.lower()=='role'),None)
-    stages = []
-    UNNAMED = '__UNNAMED__'
+    stages = []; UNNAMED = '__UNNAMED__'
     for row in rows[1:]:
         cells = row.cells
         if not cells or not any(cell_plain(c) for c in cells): continue
@@ -221,8 +234,7 @@ def parse_diff_table_ibl(tbl):
 
 # ── what is X? ─────────────────────────────────────────────────────────────
 def parse_what_is(doc, docx_path, abstract, num_to_abstract):
-    items=[]; in_what_is=False
-    body=doc.element.body
+    items=[]; in_what_is=False; body=doc.element.body
     end_markers=['le facilitated','learning experience (le) in the classroom']
     for child in body:
         tag=child.tag.split('}')[-1]
@@ -258,7 +270,6 @@ def parse_what_is(doc, docx_path, abstract, num_to_abstract):
                         items.append({'type':'bullet','text':f'{num}. {activity}','tech':False,'level':0})
     return items
 
-# ── LE preamble ────────────────────────────────────────────────────────────
 def parse_le_preamble(doc, abstract, num_to_abstract):
     items=[]; in_le=False; body=doc.element.body
     le_markers=['le facilitated','learning experience (le) in the classroom']
@@ -276,7 +287,6 @@ def parse_le_preamble(doc, abstract, num_to_abstract):
         elif tag=='tbl' and in_le: break
     return items
 
-# ── key question ───────────────────────────────────────────────────────────
 def parse_key_question(doc):
     for tbl in doc.tables:
         if tbl.rows and tbl.columns:
@@ -284,7 +294,6 @@ def parse_key_question(doc):
             if text.lower().startswith('key question'): return text
     return None
 
-# ── diff preamble ──────────────────────────────────────────────────────────
 def parse_diff_preamble(doc):
     items=[]; in_diff=False; body=doc.element.body
     for child in body:
@@ -300,7 +309,6 @@ def parse_diff_preamble(doc):
         elif tag=='tbl' and in_diff: break
     return items
 
-# ── per-doc orchestrator ───────────────────────────────────────────────────
 def parse_doc(docx_path, approach_key):
     doc=Document(docx_path)
     abstract,num_to_abstract=build_numbering_lookup(doc)
@@ -324,7 +332,6 @@ def parse_doc(docx_path, approach_key):
         else: data['diff_table']=parse_diff_table_standard(diff_tbl)
     return data
 
-# ── main ───────────────────────────────────────────────────────────────────
 def main():
     docs={'pbl':SCRIPT_DIR/'PBL.docx','ibl':SCRIPT_DIR/'IBL.docx','cbl':SCRIPT_DIR/'CBL.docx','ssi':SCRIPT_DIR/'SSI.docx'}
     approach_data={}
