@@ -33,24 +33,34 @@ def esc(s): return html_mod.escape(str(s or ''))
 def para_text(p): return clean(''.join(run.text or '' for run in p.runs))
 
 def para_html(p, rels=None):
-    """Return paragraph content as HTML, with external hyperlinks as <a> tags."""
+    """Return paragraph content as HTML, with external hyperlinks as <a> tags.
+    Uses python-docx run objects for correct xml:space handling."""
     import html as html_mod
+    from docx.oxml.ns import qn as _qn
     parts = []
     for child in p._element:
         tag = child.tag.split('}')[-1]
         if tag == 'r':
-            # plain run
-            text = clean(''.join(t.text or '' for t in child.findall('.//' + qn('w:t'))))
+            # Use python-docx to extract run text (handles xml:space correctly)
+            from docx.text.run import Run as DocxRun
+            run = DocxRun(child, p)
+            text = run.text or ''
             if text:
                 parts.append(html_mod.escape(text))
         elif tag == 'hyperlink':
-            rId = child.get(qn('r:id'))
-            text = clean(''.join(t.text or '' for t in child.findall('.//' + qn('w:t'))))
+            rId = child.get(_qn('r:id'))
+            # Extract text from all runs inside hyperlink
+            from docx.text.run import Run as DocxRun
+            hl_text = ''
+            for r_child in child:
+                if r_child.tag.split('}')[-1] == 'r':
+                    run = DocxRun(r_child, p)
+                    hl_text += run.text or ''
             url = rels.get(rId) if rels and rId else None
             if url and url not in ('0', '') and url.startswith('http'):
-                parts.append(f'<a href="{html_mod.escape(url)}" target="_blank" rel="noopener">{html_mod.escape(text)}</a>')
+                parts.append(f'<a href="{html_mod.escape(url)}" target="_blank" rel="noopener">{html_mod.escape(hl_text)}</a>')
             else:
-                parts.append(html_mod.escape(text))
+                parts.append(html_mod.escape(hl_text))
     return ''.join(parts)
 
 def build_rels(doc):
