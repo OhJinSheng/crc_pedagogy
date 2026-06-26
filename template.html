@@ -426,21 +426,18 @@ function buildPanel(key){
   const data=APPROACH_DATA[key], meta=APPROACH_META[key];
   const isIBL=(key==='ibl');
 
-  // Download button
-  const dlBtn=`<div class="panel-header">
-    <a class="download-btn" href="./${meta.file}" download>
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M8 2v8M5 7l3 3 3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1"/>
-      </svg>
-      Download ${meta.file}
-    </a>
-  </div>`;
+  // Download button — built with string concat to avoid deep nesting
+  const dlBtn='<div class="panel-header">'
+    +'<a class="download-btn" href="./'+meta.file+'" download>'
+    +'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">'
+    +'<path d="M8 2v8M5 7l3 3 3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1"/>'
+    +'</svg>Download '+meta.file+'</a></div>';
 
-  // Accordion 1: What is X?
-  const a1=accordion(`${key}-what`,`What is ${meta.name}?`,
-    `<div class="content-stream">${renderStream(data.what_is||[], true)}</div>`);
+  // Accordion 1: What is X? — pre-compute body first
+  const whatHtml = '<div class="content-stream">'+renderStream(data.what_is||[], true)+'</div>';
+  const a1=accordion(key+'-what','What is '+meta.name+'?', whatHtml);
 
-  // Accordion 2: LE facilitated (renamed)
+  // Accordion 2: LE facilitated
   let le='';
   le+=renderKeyQuestion(data.key_question_paras||null);
   le+=renderLePreamble(data.le_preamble||[]);
@@ -449,37 +446,34 @@ function buildPanel(key){
   const ht=hasTech(key);
 
   if(hasTable||ht){
-    let tb=`<div class="phase-toolbar">`;
+    let tb='<div class="phase-toolbar">';
     if(hasTable){
-      tb+=`<button class="ctrl-btn active" id="${key}-bt" onclick="setView('${key}','table')">&#9776; Table</button>`;
-      tb+=`<button class="ctrl-btn" id="${key}-bc" onclick="setView('${key}','cards')">&#9783; Cards</button>`;
+      tb+='<button class="ctrl-btn active" id="'+key+'-bt" onclick="setView(\''+key+'\',\'table\')">&#9776; Table</button>';
+      tb+='<button class="ctrl-btn" id="'+key+'-bc" onclick="setView(\''+key+'\',\'cards\')">&#9783; Cards</button>';
     }
     if(ht){
-      tb+=`<label class="toggle-wrap" title="Show or hide technology suggestions">
-        <input type="checkbox" id="${key}-btech" onchange="onTechToggle('${key}')">
-        <span class="toggle-track"></span>Show Tech
-      </label>`;
+      tb+='<label class="toggle-wrap" title="Show or hide technology suggestions">'
+        +'<input type="checkbox" id="'+key+'-btech" onchange="onTechToggle(\''+key+'\')">'
+        +'<span class="toggle-track"></span>Show Tech</label>';
     }
     if(hasTable){
-      tb+=`<button class="ctrl-btn" id="${key}-bexp" onclick="toggleExpandAll('${key}')">Expand all rows</button>`;
+      tb+='<button class="ctrl-btn" id="'+key+'-bexp" onclick="toggleExpandAll(\''+key+'\')">Expand all rows</button>';
     }
-    tb+=`</div>`;
+    tb+='</div>';
     le+=tb;
   }
 
   if(hasTable){
-    le+=`<div id="${key}-view" class="view-table tech-hidden">`;
+    le+='<div id="'+key+'-view" class="view-table tech-hidden">';
     le+=renderPhaseTable(data.phase_table, true, isIBL);
     le+=renderPhaseCards(data.phase_table, true);
-    le+=`</div>`;
+    le+='</div>';
   }
-  const a2=accordion(`${key}-le`,'An example of a teacher-facilitated LE',le);
+  const a2=accordion(key+'-le','An example of a teacher-facilitated LE', le);
 
-  // Accordion 3: Differentiating Instruction — free-flowing stream
-  // Pass key for UNNAMED resolution in diff tables
-  const diffHtml=renderDiffStream(data.diff_stream||[], key);
-  const a3=accordion(`${key}-diff`,'Differentiating Instruction',
-    `<div class="content-stream">${diffHtml}</div>`);
+  // Accordion 3: Differentiating Instruction
+  const diffHtml='<div class="content-stream">'+renderDiffStream(data.diff_stream||[], key)+'</div>';
+  const a3=accordion(key+'-diff','Differentiating Instruction', diffHtml);
 
   return dlBtn+a1+a2+a3;
 }

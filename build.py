@@ -43,6 +43,31 @@ def is_heading(p):
 def has_image(p):
     return bool(p._element.findall('.//' + qn('a:blip')))
 
+def compress_image(image_bytes, max_width=900, quality=72):
+    """Compress image to JPEG if over threshold, preserving aspect ratio."""
+    try:
+        from PIL import Image
+        import io
+        img = Image.open(io.BytesIO(image_bytes))
+        # Convert RGBA/P to RGB for JPEG
+        if img.mode in ('RGBA', 'P', 'LA'):
+            bg = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            bg.paste(img, mask=img.split()[-1] if img.mode in ('RGBA','LA') else None)
+            img = bg
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        # Resize if too wide
+        if img.width > max_width:
+            ratio = max_width / img.width
+            img = img.resize((max_width, int(img.height * ratio)), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=quality, optimize=True)
+        return buf.getvalue(), 'image/jpeg'
+    except Exception:
+        return image_bytes, ('image/png' if image_bytes[:4]==b'\x89PNG' else 'image/jpeg')
+
 def extract_image_b64(p, docx_path):
     blips = p._element.findall('.//' + qn('a:blip'))
     if not blips: return None
@@ -52,8 +77,12 @@ def extract_image_b64(p, docx_path):
     for rel in doc2.part.rels.values():
         if rel.reltype.endswith('/image') and rel.rId == rId:
             image_bytes = rel.target_part.blob
+            # Compress if over 100KB
+            if len(image_bytes) > 100 * 1024:
+                image_bytes, mime = compress_image(image_bytes)
+            else:
+                mime = 'image/png' if image_bytes[:4]==b'\x89PNG' else 'image/jpeg'
             b64 = base64.b64encode(image_bytes).decode('utf-8')
-            mime = 'image/png' if image_bytes[:4]==b'\x89PNG' else 'image/jpeg'
             return f'data:{mime};base64,{b64}'
     return None
 
