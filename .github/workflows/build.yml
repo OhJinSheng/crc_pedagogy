@@ -1,5 +1,4 @@
 name: Build pedagogy-hub.html
-
 on:
   push:
     paths:
@@ -7,32 +6,24 @@ on:
       - 'template.html'
       - 'build.py'
   workflow_dispatch:
-
 permissions:
   contents: write
-
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install dependencies
-        run: pip install python-docx
-
+        run: pip install python-docx lxml
       - name: Run build script
         run: python3 build.py
-
       - name: Commit and push generated HTML
         run: |
           git config user.name  "github-actions[bot]"
