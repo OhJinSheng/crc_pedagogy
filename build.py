@@ -324,7 +324,7 @@ def stream_section(body, doc, docx_path, abstract, num_to_abstract,
 # ── section marker helpers ─────────────────────────────────────────────────
 WHAT_IS_START = lambda tl,st: 'what is' in tl and any(s in st for s in ('Title','Heading','Normal'))
 LE_START      = lambda tl,st: any(m in tl for m in ['le facilitated','learning experience (le) in the classroom'])
-DIFF_START    = lambda tl,st: 'differentiating' in tl and ('Heading' in st or 'Title' in st)
+DIFF_START    = lambda tl,st: 'differentiating' in tl and any(s in st for s in ('Heading','Title','Subtitle','heading'))
 
 def make_end(*markers):
     return lambda tl,st: any(m in tl for m in markers) and ('Heading' in st or 'Title' in st)
