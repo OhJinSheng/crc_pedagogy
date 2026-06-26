@@ -20,26 +20,27 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;line-height:1.65}
-
 header{background:var(--ink);color:#f8f5f0;padding:20px 32px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:baseline;gap:20px}
 header h1{font-family:'Libre Baskerville',serif;font-size:1.1rem;font-weight:700;letter-spacing:.01em;white-space:nowrap}
 header .subtitle{font-size:.72rem;color:#b0aa9f;letter-spacing:.05em;text-transform:uppercase}
-
 .tabs{display:flex;background:#fff;border-bottom:2px solid var(--rule);overflow-x:auto;scrollbar-width:none;position:sticky;top:58px;z-index:90}
 .tabs::-webkit-scrollbar{display:none}
 .tab{padding:13px 26px;font-size:.82rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:none;background:none;color:var(--slate);border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;white-space:nowrap}
 .tab:hover{color:var(--ink)}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-
 .panel{display:none;padding:28px 26px 64px;max-width:1100px;margin:0 auto}
 .panel.active{display:block}
-
-/* download button row */
+/* panel colours */
+.panel[data-key=pbl]{--accent:var(--pbl);--accent-light:var(--pbl-light);--accent-mid:var(--pbl-mid)}
+.panel[data-key=ibl]{--accent:var(--ibl);--accent-light:var(--ibl-light);--accent-mid:var(--ibl-mid)}
+.panel[data-key=cbl]{--accent:var(--cbl);--accent-light:var(--cbl-light);--accent-mid:var(--cbl-mid)}
+.panel[data-key=ssi]{--accent:var(--ssi);--accent-light:var(--ssi-light);--accent-mid:var(--ssi-mid)}
+/* download */
 .panel-header{display:flex;justify-content:flex-end;margin-bottom:14px}
 .download-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;border:1px solid var(--rule);background:#fff;font-size:.76rem;font-weight:500;color:var(--slate);text-decoration:none;transition:all .15s}
 .download-btn:hover{border-color:var(--accent);color:var(--accent)}
 .download-btn svg{width:13px;height:13px;flex-shrink:0}
-
+/* accordion */
 .accordion{margin-bottom:10px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--rule)}
 .acc-btn{width:100%;display:flex;justify-content:space-between;align-items:center;padding:13px 18px;cursor:pointer;border:none;background:#fff;text-align:left;font-family:'Libre Baskerville',serif;font-size:.92rem;font-weight:700;color:var(--ink);transition:background .15s}
 .acc-btn:hover{background:var(--bg)}
@@ -48,75 +49,49 @@ header .subtitle{font-size:.72rem;color:#b0aa9f;letter-spacing:.05em;text-transf
 .acc-btn.open .acc-arrow{transform:rotate(180deg)}
 .acc-body{display:none;padding:20px 20px 24px;background:#fff}
 .acc-body.open{display:block}
-
-/* free-flowing content */
-.content-stream{}
-.content-stream .stream-bullets{list-style:disc;padding-left:1.4em;margin-bottom:.6em}
-.content-stream .stream-bullets li{margin-bottom:.42em;font-size:.88rem}
-.content-stream .stream-bullets li.sub{list-style:circle;margin-left:1.2em}
-.content-stream .stream-bullets ul{list-style:circle;padding-left:1.1em;margin-top:.2em}
+/* content */
 .stream-image{margin:14px 0;text-align:center}
 .stream-image img{max-width:100%;border-radius:var(--radius);border:1px solid var(--rule)}
 .stream-image figcaption{font-size:.76rem;color:var(--slate);margin-top:5px;font-style:italic}
-
-/* key question */
+.what-is-bullets{list-style:disc;padding-left:1.4em}
+.what-is-bullets li{margin-bottom:.45em;font-size:.88rem}
+.what-is-bullets li.sub{list-style:circle;margin-left:1.2em}
 .key-question{background:var(--accent-light);border-left:4px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0;padding:14px 18px;margin-bottom:18px;font-size:.87rem;line-height:1.75}
 .key-question-label{display:block;font-family:'Libre Baskerville',serif;font-size:.92rem;font-weight:700;margin-bottom:8px}
 .key-question p{margin-bottom:.6em}
 .key-question p:last-child{margin-bottom:0}
-
-/* LE preamble */
 .le-preamble{margin-bottom:16px}
 .le-preamble ul{list-style:disc;padding-left:1.4em}
 .le-preamble li{margin-bottom:.38em;font-size:.87rem}
 .le-preamble li.sub{list-style:circle;margin-left:1.2em}
-
-/* toolbar */
 .phase-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .ctrl-btn{padding:5px 13px;border-radius:20px;border:1px solid var(--rule);background:#fff;font-size:.76rem;font-weight:500;cursor:pointer;color:var(--slate);transition:all .15s}
 .ctrl-btn:hover{border-color:var(--accent);color:var(--accent)}
 .ctrl-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-
-/* tech toggle slider */
 .toggle-wrap{display:flex;align-items:center;gap:8px;font-size:.76rem;font-weight:500;color:var(--slate);cursor:pointer;user-select:none}
 .toggle-wrap input[type=checkbox]{display:none}
 .toggle-track{width:34px;height:18px;background:var(--rule);border-radius:9px;position:relative;transition:background .2s;flex-shrink:0}
 .toggle-track::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 input:checked+.toggle-track{background:var(--accent)}
 input:checked+.toggle-track::after{transform:translateX(16px)}
-
-/* phase table */
 .phase-table-wrap{overflow-x:auto}
 table.phase-tbl{width:100%;border-collapse:collapse;font-size:.83rem;table-layout:fixed}
 .phase-tbl th{background:var(--accent);color:#fff;padding:9px 12px;text-align:left;font-weight:600;font-size:.76rem;letter-spacing:.04em}
 .phase-tbl td{vertical-align:top;border:1px solid var(--rule)}
 .phase-tbl tbody tr:nth-child(even) td{background:var(--accent-light)}
-/* column widths — standard (4-col) */
-.phase-tbl .col-phase  {width:12%}
-.phase-tbl .col-teacher{width:30%}
-.phase-tbl .col-student{width:30%}
-.phase-tbl .col-aims   {width:28%}
-/* IBL variant — wider first column */
-.phase-tbl.ibl-widths .col-phase  {width:16%}
-.phase-tbl.ibl-widths .col-teacher{width:28%}
-.phase-tbl.ibl-widths .col-student{width:28%}
-.phase-tbl.ibl-widths .col-aims   {width:28%}
-
+.phase-tbl .col-phase{width:12%}.phase-tbl .col-teacher{width:30%}.phase-tbl .col-student{width:30%}.phase-tbl .col-aims{width:28%}
+.phase-tbl.ibl-widths .col-phase{width:16%}.phase-tbl.ibl-widths .col-teacher{width:28%}.phase-tbl.ibl-widths .col-student{width:28%}.phase-tbl.ibl-widths .col-aims{width:28%}
 .cell-scroll{padding:9px 11px;max-height:200px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
 .cell-scroll::-webkit-scrollbar{width:4px}
 .cell-scroll::-webkit-scrollbar-thumb{background:var(--rule);border-radius:2px}
 .cell-scroll::-webkit-scrollbar-thumb:hover{background:var(--accent-mid)}
 .phase-label{font-weight:600;color:var(--accent);font-size:.8rem;padding:9px 11px;vertical-align:top}
 .aims-cell-td{vertical-align:top}
-
-/* tech badge */
 .tech-badge{display:inline-block;font-size:.63rem;font-weight:700;background:var(--accent);color:#fff;padding:1px 4px;border-radius:3px;margin-right:3px;vertical-align:middle;letter-spacing:.04em}
 .tech-hidden .tech-item{display:none}
 .bullet-list{list-style:disc;padding-left:1.15em}
 .bullet-list li{margin-bottom:.32em}
 .bullet-list ul{list-style:circle;padding-left:1.1em;margin-top:.2em}
-
-/* aims badges */
 .aims-block{margin-bottom:6px}
 .aims-block:last-child{margin-bottom:0}
 .aim-badge{display:inline-block;font-size:.63rem;font-weight:700;color:#fff;padding:2px 6px;border-radius:3px;margin-right:5px;vertical-align:middle;letter-spacing:.03em;white-space:nowrap}
@@ -124,15 +99,14 @@ table.phase-tbl{width:100%;border-collapse:collapse;font-size:.83rem;table-layou
 .aim-badge.appreciate{background:var(--aim-appreciate)}
 .aim-badge.action{background:var(--aim-action)}
 .aim-text{font-size:.78rem;color:var(--slate);font-style:italic}
-
-/* cards */
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .phase-card{background:#fff;border:1px solid var(--rule);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
 .phase-card h3{font-family:'Libre Baskerville',serif;font-size:.87rem;color:var(--accent);margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--rule)}
 .card-role{font-size:.71rem;font-weight:600;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;margin:7px 0 3px}
 .card-aims{margin-top:10px;padding-top:8px;border-top:1px solid var(--rule)}
-
-/* diff tables */
+.diff-preamble{margin-bottom:14px}
+.diff-preamble ul{list-style:disc;padding-left:1.4em}
+.diff-preamble li{margin-bottom:.38em;font-size:.87rem}
 table.diff-tbl{width:100%;border-collapse:collapse;font-size:.82rem;table-layout:auto}
 .diff-tbl th{background:var(--accent);color:#fff;padding:8px 11px;text-align:left;font-size:.76rem;font-weight:600;letter-spacing:.04em}
 .diff-tbl td{vertical-align:top;padding:9px 11px;border:1px solid var(--rule)}
@@ -140,8 +114,6 @@ table.diff-tbl{width:100%;border-collapse:collapse;font-size:.82rem;table-layout
 .diff-tbl tbody tr:nth-child(even) td{background:var(--accent-light)}
 .diff-stage{font-weight:600;color:var(--accent);font-size:.8rem}
 .diff-role{font-size:.73rem;color:var(--slate);font-style:italic;margin-top:2px}
-
-/* IBL matrix */
 .ibl-matrix{width:100%;border-collapse:collapse;font-size:.79rem;table-layout:auto}
 .ibl-matrix th{background:var(--accent);color:#fff;padding:8px 9px;text-align:center;font-size:.74rem;letter-spacing:.03em}
 .ibl-matrix th.fhdr{text-align:left;width:13%}
@@ -152,10 +124,8 @@ table.diff-tbl{width:100%;border-collapse:collapse;font-size:.82rem;table-layout
 .ibl-matrix tr.trow td{background:#fff}
 .ibl-matrix tr.srow td{background:var(--accent-light)}
 .ibl-arrow-row th{padding:4px 9px;font-size:.68rem;font-weight:400;font-style:italic;background:#3a3a3a}
-
 .view-table .cards-grid{display:none}
 .view-cards .phase-table-wrap{display:none}
-
 @media(max-width:700px){
   header{padding:14px 16px}
   .panel{padding:18px 12px 48px}
@@ -175,403 +145,61 @@ table.diff-tbl{width:100%;border-collapse:collapse;font-size:.82rem;table-layout
   <button class="tab" data-key="cbl" role="tab">CBL</button>
   <button class="tab" data-key="ssi" role="tab">SSI</button>
 </nav>
-<div id="panels"></div>
+
+<div id="panels">
+  <div class="panel active" id="panel-pbl" data-key="pbl">__PBL_PANEL__</div>
+  <div class="panel" id="panel-ibl" data-key="ibl">__IBL_PANEL__</div>
+  <div class="panel" id="panel-cbl" data-key="cbl">__CBL_PANEL__</div>
+  <div class="panel" id="panel-ssi" data-key="ssi">__SSI_PANEL__</div>
+</div>
 
 <script>
-const APPROACH_DATA={pbl:__PBL_DATA__,ibl:__IBL_DATA__,cbl:__CBL_DATA__,ssi:__SSI_DATA__};
-const APPROACH_META={
-  pbl:{name:'Problem-Based Learning',  color:'--pbl',light:'--pbl-light',mid:'--pbl-mid',file:'PBL.docx'},
-  ibl:{name:'Inquiry-Based Learning',  color:'--ibl',light:'--ibl-light',mid:'--ibl-mid',file:'IBL.docx'},
-  cbl:{name:'Concept-Based Learning',  color:'--cbl',light:'--cbl-light',mid:'--cbl-mid',file:'CBL.docx'},
-  ssi:{name:'Socio-Scientific Issues Learning',color:'--ssi',light:'--ssi-light',mid:'--ssi-mid',file:'SSI.docx'},
-};
-const UNNAMED='__UNNAMED__';
-
-function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-
-// ── aim badges ────────────────────────────────────────────────────────────
-function aimClass(tag){
-  const t=tag.toLowerCase();
-  if(t.startsWith('understand')) return 'understand';
-  if(t.startsWith('appreciate')) return 'appreciate';
-  if(t.startsWith('take action')) return 'action';
-  return 'understand';
-}
-function renderAimsBlocks(blocks){
-  if(!blocks||!blocks.length) return '';
-  return blocks.map(b=>{
-    if(!b.tag) return `<div class="aims-block"><span class="aim-text">${esc(b.text)}</span></div>`;
-    return `<div class="aims-block"><span class="aim-badge ${aimClass(b.tag)}">${esc(b.tag)}</span>${b.text?`<span class="aim-text">${esc(b.text)}</span>`:''}`;
-  }).join('');
-}
-
-// ── bullet list renderer ──────────────────────────────────────────────────
-function renderBullets(items,showTech){
-  if(!items||!items.length) return '';
-  const vis=showTech?items:items.filter(b=>!b.tech);
-  if(!vis.length) return '';
-  let html='<ul class="bullet-list">',i=0;
-  while(i<vis.length){
-    const b=vis[i];
-    if(b.level===0){
-      const badge=b.tech?`<span class="tech-badge">Tech</span> `:'';
-      const cls=b.tech?' class="tech-item"':'';
-      html+=`<li${cls}>${badge}${esc(b.text)}`;
-      let subs=[],j=i+1;
-      while(j<vis.length&&vis[j].level>=1){subs.push(vis[j]);j++;}
-      if(subs.length){
-        html+='<ul>';
-        subs.forEach(s=>{
-          const sb=s.tech?`<span class="tech-badge">Tech</span> `:'';
-          const sc=s.tech?' class="tech-item"':'';
-          html+=`<li${sc}>${sb}${esc(s.text)}</li>`;
-        });
-        html+='</ul>';i=j;
-      } else {i++;}
-      html+='</li>';
-    } else {
-      const badge=b.tech?`<span class="tech-badge">Tech</span> `:'';
-      const cls=b.tech?' class="tech-item"':'';
-      html+=`<li${cls} style="list-style:circle;margin-left:1.1em">${badge}${esc(b.text)}</li>`;
-      i++;
-    }
-  }
-  return html+'</ul>';
-}
-
-// ── free-flowing content stream renderer ──────────────────────────────────
-function renderStream(items, showTech){
-  if(!items||!items.length) return '';
-  let html='', currentBullets=[], inBullets=false;
-
-  function flushBullets(){
-    if(!currentBullets.length) return;
-    const vis=showTech?currentBullets:currentBullets.filter(b=>!b.tech);
-    if(vis.length){
-      html+=`<ul class="stream-bullets">`;
-      let i=0;
-      while(i<vis.length){
-        const b=vis[i];
-        if(b.level===0){
-          const badge=b.tech?`<span class="tech-badge">Tech</span> `:'';
-          const cls=b.tech?' class="tech-item"':'';
-          html+=`<li${cls}>${badge}${esc(b.text)}`;
-          let subs=[],j=i+1;
-          while(j<vis.length&&vis[j].level>=1){subs.push(vis[j]);j++;}
-          if(subs.length){
-            html+='<ul>';
-            subs.forEach(s=>{
-              const sb=s.tech?`<span class="tech-badge">Tech</span> `:'';
-              const sc=s.tech?' class="tech-item"':'';
-              html+=`<li${sc}>${sb}${esc(s.text)}</li>`;
-            });
-            html+='</ul>';i=j;
-          } else {i++;}
-          html+='</li>';
-        } else {
-          html+=`<li class="sub">${esc(b.text)}</li>`;i++;
-        }
-      }
-      html+='</ul>';
-    }
-    currentBullets=[];
-  }
-
-  for(const item of items){
-    if(item.type==='bullet'){
-      currentBullets.push(item);
-    } else if(item.type==='bullet_group'){
-      flushBullets();
-      // IBL component table flattened to bullets
-      html+=renderBullets(item.items, true);
-    } else if(item.type==='image'){
-      flushBullets();
-      html+=`<figure class="stream-image"><img src="${item.src}" alt="Diagram">${item.caption?`<figcaption>${esc(item.caption)}</figcaption>`:''}</figure>`;
-    } else if(item.type==='table'){
-      flushBullets();
-      if(item.table_type==='diff_ibl') html+=renderDiffIBL(item.data);
-      else if(item.table_type==='diff_standard') html+=renderDiffStandard(item.data, null);
-    }
-  }
-  flushBullets();
-  return html;
-}
-
-// ── key question ──────────────────────────────────────────────────────────
-function renderKeyQuestion(paras){
-  if(!paras||!paras.length) return '';
-  // first para starts with 'Key Question:' — use as label
-  const first=paras[0];
-  const colonIdx=first.indexOf(':');
-  let label=first, rest=[];
-  if(colonIdx>-1){
-    label=first.slice(0,colonIdx+1).trim();
-    const afterColon=first.slice(colonIdx+1).trim();
-    rest=afterColon?[afterColon,...paras.slice(1)]:paras.slice(1);
-  } else {
-    rest=paras.slice(1);
-  }
-  const bodyHtml=rest.map(p=>`<p>${esc(p)}</p>`).join('');
-  return `<div class="key-question"><span class="key-question-label">${esc(label)}</span>${bodyHtml}</div>`;
-}
-
-// ── LE preamble renderer ──────────────────────────────────────────────────
-function renderLePreamble(items){
-  if(!items||!items.length) return '';
-  // may contain bullets and images
-  return `<div class="le-preamble">${renderStream(items, true)}</div>`;
-}
-
-// ── phase table ────────────────────────────────────────────────────────────
-function renderPhaseTable(pt, showTech, isIBL){
-  if(!pt||!pt.rows||!pt.rows.length) return '';
-  const wclass=isIBL?' ibl-widths':'';
-  const colClasses=['col-phase','col-teacher','col-student','col-aims'];
-  const ths=pt.col_headers.map((h,i)=>`<th class="${colClasses[i]||''}">${esc(h)}</th>`).join('');
-  const trs=pt.rows.map(r=>{
-    const th=renderBullets(r.teacher,showTech);
-    const st=renderBullets(r.student,showTech);
-    const aimsHtml=renderAimsBlocks(r.aims);
-    return `<tr>
-      <td class="phase-label">${esc(r.phase)}</td>
-      <td><div class="cell-scroll">${th}</div></td>
-      <td><div class="cell-scroll">${st}</div></td>
-      ${r.aims!==undefined?`<td class="aims-cell-td"><div class="cell-scroll">${aimsHtml}</div></td>`:''}
-    </tr>`;
-  }).join('');
-  return `<div class="phase-table-wrap"><table class="phase-tbl${wclass}" cellspacing="0"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
-}
-
-function renderPhaseCards(pt, showTech){
-  if(!pt||!pt.rows||!pt.rows.length) return '';
-  const l2=pt.col_headers[pt.teacher_col]||"Teacher's Role";
-  const l3=pt.col_headers[pt.student_col]||"Students' Role";
-  const cards=pt.rows.map(r=>{
-    const th=renderBullets(r.teacher,showTech);
-    const st=renderBullets(r.student,showTech);
-    const aimsHtml=renderAimsBlocks(r.aims);
-    return `<div class="phase-card">
-      <h3>${esc(r.phase)}</h3>
-      ${th?`<div class="card-role">${esc(l2)}</div>${th}`:''}
-      ${st?`<div class="card-role">${esc(l3)}</div>${st}`:''}
-      ${aimsHtml?`<div class="card-aims">${aimsHtml}</div>`:''}
-    </div>`;
-  }).join('');
-  return `<div class="cards-grid">${cards}</div>`;
-}
-
-// ── diff renderers ────────────────────────────────────────────────────────
-function renderDiffStandard(dt, key){
-  if(!dt||!dt.stages||!dt.stages.length) return '';
-  // resolve unnamed stage from phase table if key provided
-  let firstName='Stage 1';
-  if(key){
-    const phaseRows=((APPROACH_DATA[key].phase_table)||{}).rows||[];
-    if(phaseRows.length) firstName=phaseRows[0].phase;
-  }
-  const ths=dt.headers.map(h=>`<th>${esc(h)}</th>`).join('');
-  let rows='';
-  dt.stages.forEach(s=>{
-    const name=s.stage===UNNAMED?firstName:s.stage;
-    if(dt.has_role_col){
-      rows+=`<tr>
-        <td class="diff-stage" rowspan="2">${esc(name)}</td>
-        <td class="diff-role">Teacher</td>
-        <td>${esc(s.teacher_lower||'')}</td><td>${esc(s.teacher_higher||'')}</td>
-      </tr><tr>
-        <td class="diff-role">Students</td>
-        <td>${esc(s.student_lower||'')}</td><td>${esc(s.student_higher||'')}</td>
-      </tr>`;
-    } else {
-      rows+=`<tr><td class="diff-stage">${esc(name)}</td><td>${esc(s.lower||'')}</td><td>${esc(s.higher||'')}</td></tr>`;
-    }
-  });
-  return `<div style="overflow-x:auto"><table class="diff-tbl" cellspacing="0"><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-
-function renderDiffIBL(dt){
-  if(!dt||!dt.features||!dt.features.length) return '';
-  let rows='';
-  dt.features.forEach(f=>{
-    const ts=(f.teacher||[]).map(c=>`<td>${esc(c)}</td>`).join('');
-    const ss=(f.students||[]).map(c=>`<td>${esc(c)}</td>`).join('');
-    rows+=`<tr class="trow"><td class="fcell" rowspan="2">${esc(f.name)}</td><td class="rcell">Teacher</td>${ts}</tr>
-    <tr class="srow"><td class="rcell">Students</td>${ss}</tr>`;
-  });
-  return `<div style="overflow-x:auto"><table class="ibl-matrix" cellspacing="0">
-    <thead>
-      <tr><th class="fhdr" rowspan="2">Essential Feature</th><th class="rhdr" rowspan="2">Role</th>
-        <th colspan="4">Extent of Guidance from Teacher &#8592; More &nbsp; Less &#8594;</th></tr>
-      <tr class="ibl-arrow-row"><th>Highly structured</th><th>Guided</th><th>Structured inquiry</th><th>Open inquiry</th></tr>
-    </thead><tbody>${rows}</tbody>
-  </table></div>`;
-}
-
-function hasTech(key){
-  const pt=APPROACH_DATA[key].phase_table;
-  if(!pt) return false;
-  return pt.rows.some(r=>[...(r.teacher||[]),...(r.student||[])].some(b=>b.tech));
-}
-
-// ── accordion ──────────────────────────────────────────────────────────────
-function accordion(id,label,body){
-  return `<div class="accordion">
-    <button class="acc-btn" onclick="toggleAcc('${id}')"><span>${label}</span><span class="acc-arrow">&#9660;</span></button>
-    <div class="acc-body" id="${id}">${body}</div>
-  </div>`;
-}
-
-// ── build panel ────────────────────────────────────────────────────────────
-function buildPanel(key){
-  const data=APPROACH_DATA[key], meta=APPROACH_META[key];
-  const isIBL=(key==='ibl');
-
-  // Download button — built with string concat to avoid deep nesting
-  const dlBtn='<div class="panel-header">'
-    +'<a class="download-btn" href="./'+meta.file+'" download>'
-    +'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">'
-    +'<path d="M8 2v8M5 7l3 3 3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1"/>'
-    +'</svg>Download '+meta.file+'</a></div>';
-
-  // Accordion 1: What is X? — pre-compute body first
-  const whatHtml = '<div class="content-stream">'+renderStream(data.what_is||[], true)+'</div>';
-  const a1=accordion(key+'-what','What is '+meta.name+'?', whatHtml);
-
-  // Accordion 2: LE facilitated
-  let le='';
-  le+=renderKeyQuestion(data.key_question_paras||null);
-  le+=renderLePreamble(data.le_preamble||[]);
-
-  const hasTable=!!(data.phase_table&&data.phase_table.rows&&data.phase_table.rows.length);
-  const ht=hasTech(key);
-
-  if(hasTable||ht){
-    let tb='<div class="phase-toolbar">';
-    if(hasTable){
-      tb+='<button class="ctrl-btn active" id="'+key+'-bt" onclick="setView(\''+key+'\',\'table\')">&#9776; Table</button>';
-      tb+='<button class="ctrl-btn" id="'+key+'-bc" onclick="setView(\''+key+'\',\'cards\')">&#9783; Cards</button>';
-    }
-    if(ht){
-      tb+='<label class="toggle-wrap" title="Show or hide technology suggestions">'
-        +'<input type="checkbox" id="'+key+'-btech" onchange="onTechToggle(\''+key+'\')">'
-        +'<span class="toggle-track"></span>Show Tech</label>';
-    }
-    if(hasTable){
-      tb+='<button class="ctrl-btn" id="'+key+'-bexp" onclick="toggleExpandAll(\''+key+'\')">Expand all rows</button>';
-    }
-    tb+='</div>';
-    le+=tb;
-  }
-
-  if(hasTable){
-    le+='<div id="'+key+'-view" class="view-table tech-hidden">';
-    le+=renderPhaseTable(data.phase_table, true, isIBL);
-    le+=renderPhaseCards(data.phase_table, true);
-    le+='</div>';
-  }
-  const a2=accordion(key+'-le','An example of a teacher-facilitated LE', le);
-
-  // Accordion 3: Differentiating Instruction
-  const diffHtml='<div class="content-stream">'+renderDiffStream(data.diff_stream||[], key)+'</div>';
-  const a3=accordion(key+'-diff','Differentiating Instruction', diffHtml);
-
-  return dlBtn+a1+a2+a3;
-}
-
-function renderDiffStream(items, key){
-  if(!items||!items.length) return '';
-  let html='', currentBullets=[];
-
-  function flushBullets(){
-    if(!currentBullets.length) return;
-    html+=`<ul class="stream-bullets">`;
-    let i=0;
-    while(i<currentBullets.length){
-      const b=currentBullets[i];
-      if(b.level===0){
-        html+=`<li>${esc(b.text)}`;
-        let subs=[],j=i+1;
-        while(j<currentBullets.length&&currentBullets[j].level>=1){subs.push(currentBullets[j]);j++;}
-        if(subs.length){html+='<ul>';subs.forEach(s=>{html+=`<li class="sub">${esc(s.text)}</li>`;});html+='</ul>';i=j;}
-        else{i++;}
-        html+='</li>';
-      } else {html+=`<li class="sub">${esc(b.text)}</li>`;i++;}
-    }
-    html+='</ul>';
-    currentBullets=[];
-  }
-
-  for(const item of items){
-    if(item.type==='bullet'){
-      currentBullets.push(item);
-    } else if(item.type==='image'){
-      flushBullets();
-      html+=`<figure class="stream-image"><img src="${item.src}" alt="Diagram">${item.caption?`<figcaption>${esc(item.caption)}</figcaption>`:''}</figure>`;
-    } else if(item.type==='table'){
-      flushBullets();
-      if(item.table_type==='diff_ibl') html+=renderDiffIBL(item.data);
-      else if(item.table_type==='diff_standard') html+=renderDiffStandard(item.data, key);
-    }
-  }
-  flushBullets();
-  return html;
-}
-
-function setAccent(el,meta){
-  el.style.setProperty('--accent',`var(${meta.color})`);
-  el.style.setProperty('--accent-light',`var(${meta.light})`);
-  el.style.setProperty('--accent-mid',`var(${meta.mid})`);
-}
-
-function init(){
-  const panelsEl=document.getElementById('panels');
-  Object.keys(APPROACH_DATA).forEach(key=>{
-    const div=document.createElement('div');
-    div.className='panel';div.id=`panel-${key}`;
-    div.innerHTML=buildPanel(key);
-    panelsEl.appendChild(div);
-    setAccent(div,APPROACH_META[key]);
-  });
-  activateTab('pbl');
-}
-
-function activateTab(key){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.key===key));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${key}`));
-}
-document.querySelector('.tabs').addEventListener('click',e=>{
-  const btn=e.target.closest('.tab');if(btn)activateTab(btn.dataset.key);
+// Tab switching
+document.querySelector('.tabs').addEventListener('click', function(e) {
+  var btn = e.target.closest('.tab');
+  if (!btn) return;
+  var key = btn.dataset.key;
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.toggle('active', t.dataset.key === key); });
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.toggle('active', p.id === 'panel-' + key); });
 });
 
-function toggleAcc(id){
-  const body=document.getElementById(id),btn=body.previousElementSibling;
-  const open=body.classList.toggle('open');btn.classList.toggle('open',open);
+// Accordion toggle
+function toggleAcc(id) {
+  var body = document.getElementById(id);
+  var btn = body.previousElementSibling;
+  var open = body.classList.toggle('open');
+  btn.classList.toggle('open', open);
 }
 
-function setView(key,mode){
-  const v=document.getElementById(`${key}-view`);if(!v)return;
-  const techHidden=v.classList.contains('tech-hidden');
-  v.className=`view-${mode}${techHidden?' tech-hidden':''}`;
-  document.getElementById(`${key}-bt`).classList.toggle('active',mode==='table');
-  document.getElementById(`${key}-bc`).classList.toggle('active',mode==='cards');
+// Table/Cards view
+function setView(key, mode) {
+  var v = document.getElementById(key + '-view');
+  if (!v) return;
+  var techHidden = v.classList.contains('tech-hidden');
+  v.className = 'view-' + mode + (techHidden ? ' tech-hidden' : '');
+  document.getElementById(key + '-bt').classList.toggle('active', mode === 'table');
+  document.getElementById(key + '-bc').classList.toggle('active', mode === 'cards');
 }
 
-function onTechToggle(key){
-  const chk=document.getElementById(`${key}-btech`);
-  const v=document.getElementById(`${key}-view`);if(!v)return;
-  v.classList.toggle('tech-hidden',!chk.checked);
+// Tech toggle
+function onTechToggle(key) {
+  var chk = document.getElementById(key + '-btech');
+  var v = document.getElementById(key + '-view');
+  if (!v) return;
+  v.classList.toggle('tech-hidden', !chk.checked);
 }
 
-const expandState={};
-function toggleExpandAll(key){
-  const v=document.getElementById(`${key}-view`),btn=document.getElementById(`${key}-bexp`);if(!v)return;
-  const exp=!expandState[key];expandState[key]=exp;
-  v.querySelectorAll('.cell-scroll').forEach(c=>{c.style.maxHeight=exp?'none':'200px';});
-  btn.textContent=exp?'Collapse rows':'Expand all rows';
-  btn.classList.toggle('active',exp);
+// Expand all rows
+var expandState = {};
+function toggleExpandAll(key) {
+  var v = document.getElementById(key + '-view');
+  var btn = document.getElementById(key + '-bexp');
+  if (!v) return;
+  var exp = !expandState[key]; expandState[key] = exp;
+  v.querySelectorAll('.cell-scroll').forEach(function(c) { c.style.maxHeight = exp ? 'none' : '200px'; });
+  btn.textContent = exp ? 'Collapse rows' : 'Expand all rows';
+  btn.classList.toggle('active', exp);
 }
-
-init();
 </script>
 </body>
 </html>
