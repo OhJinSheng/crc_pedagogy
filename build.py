@@ -24,14 +24,21 @@ def clean(text):
 def para_text(p):
     return clean(''.join(run.text or '' for run in p.runs))
 
+def para_text_preserve_newlines(p):
+    """Return paragraph text with internal line breaks preserved."""
+    return clean(''.join(run.text or '' for run in p.runs))
+
 def is_tech(p):
-    return bool(re.match(r'^\(Tech\)',para_text(p),re.IGNORECASE))
+    return bool(re.match(r'^\(Tech\)', para_text(p), re.IGNORECASE))
 
 def strip_tech(t):
     return re.sub(r'^\(Tech\)\s*','',t,flags=re.IGNORECASE).strip()
 
 def para_style(p):
     return (p.style.name or '').strip()
+
+def is_heading(p):
+    return any(s in para_style(p) for s in ('Title','Heading'))
 
 def has_image(p):
     return bool(p._element.findall('.//' + qn('a:blip')))
@@ -50,6 +57,7 @@ def extract_image_b64(p, docx_path):
             return f'data:{mime};base64,{b64}'
     return None
 
+# ── numbering lookup ───────────────────────────────────────────────────────
 def build_numbering_lookup(doc):
     numbering_part = None
     for rel in doc.part.rels.values():
@@ -114,39 +122,59 @@ def cell_plain(cell):
 TAG_RE = re.compile(r'^\[([^\]]+)\]')
 
 def parse_aims_cell(cell):
-    """
-    Parse the aims cell into a list of aim blocks:
-    [{'tag': 'Understand', 'text': 'Students deepen...'}, ...]
-    Handles both single-para (tag + text on same line) and
-    multi-para (tag on own para, text on following paras) formats.
-    """
     paras = [clean(p.text) for p in cell.paragraphs]
-    paras = [p for p in paras if p]  # drop empty
-
-    blocks = []
-    current_tag = None
-    current_lines = []
-
+    paras = [p for p in paras if p]
+    blocks = []; current_tag = None; current_lines = []
     def flush():
         if current_tag is not None:
             blocks.append({'tag': current_tag, 'text': ' '.join(current_lines).strip()})
-
     for para in paras:
         m = TAG_RE.match(para)
         if m:
-            flush()
-            current_tag = m.group(1).strip()
+            flush(); current_tag = m.group(1).strip()
             rest = para[m.end():].strip()
             current_lines = [rest] if rest else []
         else:
-            if current_tag is not None:
-                current_lines.append(para)
-            else:
-                # text before any tag — unlikely but safe
-                blocks.append({'tag': None, 'text': para})
-
+            if current_tag is not None: current_lines.append(para)
+            else: blocks.append({'tag': None, 'text': para})
     flush()
     return blocks if blocks else None
+
+# ── table identity ─────────────────────────────────────────────────────────
+def identify_table(tbl):
+    """
+    Returns one of: 'key_question', 'phase', 'diff_standard', 'diff_ibl',
+                    'ibl_component', 'unknown'
+    """
+    if not tbl.rows: return 'unknown'
+    n_rows = len(tbl.rows)
+    n_cols = len(tbl.columns)
+    first_cell = clean(tbl.rows[0].cells[0].text)
+
+    if n_rows == 1 and n_cols == 1 and first_cell.lower().startswith('key question'):
+        return 'key_question'
+
+    headers = [clean(c.text).lower() for c in tbl.rows[0].cells]
+
+    if n_cols == 2 and headers[0] in ('component',''):
+        return 'ibl_component'
+
+    has_teacher = any('teacher' in h for h in headers)
+    has_student = any('student' in h for h in headers)
+    if has_teacher and has_student:
+        return 'phase'
+
+    has_lower  = any('lower'  in h for h in headers)
+    has_higher = any('higher' in h for h in headers)
+    if has_lower and has_higher:
+        if n_cols >= 6: return 'diff_ibl'
+        return 'diff_standard'
+
+    # IBL diff matrix: header row may have 'more' repeated
+    if n_cols >= 6 and any('more' in h or 'essential' in h for h in headers):
+        return 'diff_ibl'
+
+    return 'unknown'
 
 # ── phase table ────────────────────────────────────────────────────────────
 def parse_phase_table(tbl, abstract, num_to_abstract):
@@ -164,22 +192,15 @@ def parse_phase_table(tbl, abstract, num_to_abstract):
         cells = row.cells
         if not cells or not any(cell_plain(c) for c in cells): continue
         phase_raw = cell_plain(cells[0])
-        phase_label = re.sub(r'\s+',' ',phase_raw).strip()
-        phase_label = re.sub(r'^\d+\.\s*','',phase_label)
+        phase_label = re.sub(r'\s+',' ', phase_raw).strip()
+        phase_label = re.sub(r'^\d+\.\s*','', phase_label)
         teacher_bullets = cell_bullets(cells[teacher_col],abstract,num_to_abstract) if teacher_col<len(cells) else []
         student_bullets = cell_bullets(cells[student_col],abstract,num_to_abstract) if student_col<len(cells) else []
-        # aims: parse into structured blocks
         aims_blocks = parse_aims_cell(cells[aims_col]) if aims_col is not None and aims_col<len(cells) else None
         if phase_label and not teacher_bullets and not student_bullets and not aims_blocks: continue
-        parsed_rows.append({
-            'phase': phase_label,
-            'teacher': teacher_bullets,
-            'student': student_bullets,
-            'aims': aims_blocks,
-        })
+        parsed_rows.append({'phase':phase_label,'teacher':teacher_bullets,'student':student_bullets,'aims':aims_blocks})
     return {'col_headers':col_headers,'teacher_col':teacher_col,'student_col':student_col,'aims_col':aims_col,'rows':parsed_rows}
 
-# ── diff tables ────────────────────────────────────────────────────────────
 def parse_diff_table_standard(tbl):
     rows = tbl.rows
     if not rows: return {'type':'standard','headers':[],'stages':[],'has_role_col':False}
@@ -232,122 +253,212 @@ def parse_diff_table_ibl(tbl):
         elif 'student' in role_val.lower(): features[fi]['students']=level_cells
     return {'type':'ibl_matrix','features':features}
 
-# ── what is X? ─────────────────────────────────────────────────────────────
-def parse_what_is(doc, docx_path, abstract, num_to_abstract):
-    items=[]; in_what_is=False; body=doc.element.body
-    end_markers=['le facilitated','learning experience (le) in the classroom']
+# ── free-flowing section stream ────────────────────────────────────────────
+def stream_section(body, doc, docx_path, abstract, num_to_abstract,
+                   start_marker_fn, end_marker_fn,
+                   table_handler=None):
+    """
+    Walk document body from start_marker to end_marker, emitting content items:
+      {type:'bullet', text, tech, level}
+      {type:'image',  src, caption}
+      {type:'table',  table_type, data}   -- if table_handler provided
+      {type:'paragraph', text}            -- plain non-bullet paragraph
+    """
+    items = []; in_section = False; last_image_idx = None
+
     for child in body:
-        tag=child.tag.split('}')[-1]
-        if tag=='p':
+        tag = child.tag.split('}')[-1]
+
+        if tag == 'p':
             from docx.text.paragraph import Paragraph as DP
-            p=DP(child,doc); text=para_text(p); style=para_style(p); tl=text.lower()
-            if 'what is' in tl and any(s in style for s in ('Title','Heading','Normal')):
-                in_what_is=True; continue
-            if in_what_is:
-                if any(m in tl for m in end_markers) and ('Heading' in style or 'Title' in style): break
-                if not text and not has_image(p): continue
-                if has_image(p):
-                    src=extract_image_b64(p,docx_path)
-                    if src:
-                        caption=re.sub(r'^\.\s*','',text).strip()
-                        items.append({'type':'image','src':src,'caption':caption})
-                    continue
-                if 'Caption' in style:
-                    if items and items[-1]['type']=='image' and not items[-1]['caption']:
-                        items[-1]['caption']=re.sub(r'^\.\s*','',text).strip()
-                    continue
-                level=get_bullet_level(p,abstract,num_to_abstract)
-                items.append({'type':'bullet','text':text,'tech':is_tech(p),'level':level})
-        elif tag=='tbl' and in_what_is:
+            p = DP(child, doc)
+            text  = para_text(p)
+            style = para_style(p)
+            tl    = text.lower()
+
+            if not in_section:
+                if start_marker_fn(tl, style):
+                    in_section = True
+                continue
+
+            # end of section
+            if end_marker_fn(tl, style):
+                break
+
+            # image
+            if has_image(p):
+                src = extract_image_b64(p, docx_path)
+                if src:
+                    caption = re.sub(r'^\.\s*','', text).strip()
+                    items.append({'type':'image','src':src,'caption':caption})
+                    last_image_idx = len(items)-1
+                continue
+
+            # caption style — attach to preceding image
+            if 'Caption' in style and last_image_idx is not None:
+                if not items[last_image_idx]['caption']:
+                    items[last_image_idx]['caption'] = re.sub(r'^\.\s*','',text).strip()
+                continue
+
+            if not text: continue
+
+            # bullet or plain paragraph
+            level = get_bullet_level(p, abstract, num_to_abstract)
+            tech  = is_tech(p)
+            items.append({'type':'bullet','text':strip_tech(text) if tech else text,
+                          'tech':tech,'level':level})
+
+        elif tag == 'tbl' and in_section:
             from docx.table import Table as DT
-            tbl=DT(child,doc); rows=tbl.rows
-            if not rows: continue
-            hdrs=[clean(c.text) for c in rows[0].cells]
-            if len(hdrs)==2 and hdrs[0].lower() in ('component',''):
-                for row in rows[1:]:
-                    num=clean(row.cells[0].text); activity=clean(row.cells[1].text)
-                    if num and activity:
-                        items.append({'type':'bullet','text':f'{num}. {activity}','tech':False,'level':0})
+            tbl = DT(child, doc)
+            ttype = identify_table(tbl)
+
+            if table_handler:
+                result = table_handler(tbl, ttype)
+                if result is not None:
+                    items.append(result)
+            # else: skip tables (e.g. in LE preamble scanning)
+
     return items
 
-def parse_le_preamble(doc, abstract, num_to_abstract):
-    items=[]; in_le=False; body=doc.element.body
-    le_markers=['le facilitated','learning experience (le) in the classroom']
-    for child in body:
-        tag=child.tag.split('}')[-1]
-        if tag=='p':
-            from docx.text.paragraph import Paragraph as DP
-            p=DP(child,doc); text=para_text(p); style=para_style(p); tl=text.lower()
-            if any(m in tl for m in le_markers): in_le=True; continue
-            if in_le:
-                if ('Heading' in style or 'Title' in style) and text: break
-                if not text: continue
-                level=get_bullet_level(p,abstract,num_to_abstract)
-                items.append({'text':text,'tech':is_tech(p),'level':level})
-        elif tag=='tbl' and in_le: break
-    return items
+# ── section marker helpers ─────────────────────────────────────────────────
+WHAT_IS_START = lambda tl,st: 'what is' in tl and any(s in st for s in ('Title','Heading','Normal'))
+LE_START      = lambda tl,st: any(m in tl for m in ['le facilitated','learning experience (le) in the classroom'])
+DIFF_START    = lambda tl,st: 'differentiating' in tl and ('Heading' in st or 'Title' in st)
 
-def parse_key_question(doc):
+def make_end(*markers):
+    return lambda tl,st: any(m in tl for m in markers) and ('Heading' in st or 'Title' in st)
+
+WHAT_IS_END = make_end('le facilitated','learning experience (le) in the classroom','differentiating')
+LE_END      = make_end('differentiating')
+DIFF_END    = make_end('what is')  # safety — shouldn't appear after diff
+
+# ── key question (from table) ──────────────────────────────────────────────
+def parse_key_question_paragraphs(doc):
+    """Return list of paragraph strings from the Key Question table cell."""
     for tbl in doc.tables:
         if tbl.rows and tbl.columns:
-            text=clean(tbl.rows[0].cells[0].text)
-            if text.lower().startswith('key question'): return text
+            cell = tbl.rows[0].cells[0]
+            text = clean(cell.text)
+            if text.lower().startswith('key question'):
+                paras = [clean(p.text) for p in cell.paragraphs if clean(p.text)]
+                return paras if paras else [text]
     return None
 
-def parse_diff_preamble(doc):
-    items=[]; in_diff=False; body=doc.element.body
-    for child in body:
-        tag=child.tag.split('}')[-1]
-        if tag=='p':
-            from docx.text.paragraph import Paragraph as DP
-            p=DP(child,doc); text=para_text(p); style=para_style(p)
-            if 'differentiating' in text.lower() and 'Heading' in style:
-                in_diff=True; continue
-            if in_diff:
-                if not text: continue
-                items.append({'text':text})
-        elif tag=='tbl' and in_diff: break
-    return items
-
+# ── per-doc orchestrator ───────────────────────────────────────────────────
 def parse_doc(docx_path, approach_key):
-    doc=Document(docx_path)
-    abstract,num_to_abstract=build_numbering_lookup(doc)
-    data={}
-    data['what_is']      =parse_what_is(doc,docx_path,abstract,num_to_abstract)
-    data['le_preamble']  =parse_le_preamble(doc,abstract,num_to_abstract)
-    data['diff_preamble']=parse_diff_preamble(doc)
-    kq=parse_key_question(doc)
-    if kq: data['key_question']=kq
-    tables=list(doc.tables)
-    if approach_key in ('pbl','ibl'):
-        phase_tbl=tables[1] if len(tables)>1 else None
-        diff_tbl =tables[2] if len(tables)>2 else None
-    else:
-        phase_tbl=tables[0] if len(tables)>0 else None
-        diff_tbl =tables[1] if len(tables)>1 else None
-    if phase_tbl:
-        data['phase_table']=parse_phase_table(phase_tbl,abstract,num_to_abstract)
-    if diff_tbl:
-        if approach_key=='ibl': data['diff_table']=parse_diff_table_ibl(diff_tbl)
-        else: data['diff_table']=parse_diff_table_standard(diff_tbl)
+    doc = Document(docx_path)
+    abstract, num_to_abstract = build_numbering_lookup(doc)
+    body = doc.element.body
+    data = {}
+
+    # ── What is X? — fully free-flowing ──
+    def what_is_table_handler(tbl, ttype):
+        if ttype == 'ibl_component':
+            # flatten to bullets
+            rows = tbl.rows
+            bullets = []
+            for row in rows[1:]:
+                num = clean(row.cells[0].text); act = clean(row.cells[1].text)
+                if num and act:
+                    bullets.append({'type':'bullet','text':f'{num}. {act}','tech':False,'level':0})
+            return {'type':'bullet_group','items':bullets}
+        return None  # skip other tables in what_is
+
+    what_is_items = stream_section(
+        body, doc, docx_path, abstract, num_to_abstract,
+        WHAT_IS_START, WHAT_IS_END,
+        table_handler=what_is_table_handler
+    )
+    data['what_is'] = what_is_items
+
+    # ── LE facilitated — free-flowing preamble, then structured phase table ──
+    # Walk LE section: collect preamble items until we hit the phase table
+    le_preamble = []
+    phase_table_data = None
+    key_question_paras = parse_key_question_paragraphs(doc)
+    if key_question_paras:
+        data['key_question_paras'] = key_question_paras
+
+    in_le = False
+    found_phase = False
+    for child in body:
+        tag = child.tag.split('}')[-1]
+        if tag == 'p':
+            from docx.text.paragraph import Paragraph as DP
+            p = DP(child, doc)
+            text = para_text(p); style = para_style(p); tl = text.lower()
+            if not in_le:
+                if LE_START(tl, style): in_le = True
+                continue
+            if LE_END(tl, style): break
+            if found_phase: continue  # after phase table, skip remaining LE paras
+            if not text and not has_image(p): continue
+            if has_image(p):
+                src = extract_image_b64(p, docx_path)
+                if src:
+                    caption = re.sub(r'^\.\s*','',text).strip()
+                    le_preamble.append({'type':'image','src':src,'caption':caption})
+                continue
+            level = get_bullet_level(p, abstract, num_to_abstract)
+            tech  = is_tech(p)
+            le_preamble.append({'type':'bullet','text':strip_tech(text) if tech else text,
+                                 'tech':tech,'level':level})
+        elif tag == 'tbl' and in_le:
+            from docx.table import Table as DT
+            tbl = DT(child, doc)
+            ttype = identify_table(tbl)
+            if ttype == 'key_question':
+                continue  # already handled separately
+            if ttype == 'phase' and not found_phase:
+                phase_table_data = parse_phase_table(tbl, abstract, num_to_abstract)
+                found_phase = True
+
+    data['le_preamble']  = le_preamble
+    if phase_table_data:
+        data['phase_table'] = phase_table_data
+
+    # ── Differentiating Instruction — fully free-flowing ──
+    def diff_table_handler(tbl, ttype):
+        if ttype == 'diff_ibl':
+            return {'type':'table','table_type':'diff_ibl','data':parse_diff_table_ibl(tbl)}
+        if ttype == 'diff_standard':
+            return {'type':'table','table_type':'diff_standard','data':parse_diff_table_standard(tbl)}
+        return None
+
+    diff_items = stream_section(
+        body, doc, docx_path, abstract, num_to_abstract,
+        DIFF_START, DIFF_END,
+        table_handler=diff_table_handler
+    )
+    data['diff_stream'] = diff_items
+
     return data
 
+# ── main ───────────────────────────────────────────────────────────────────
 def main():
-    docs={'pbl':SCRIPT_DIR/'PBL.docx','ibl':SCRIPT_DIR/'IBL.docx','cbl':SCRIPT_DIR/'CBL.docx','ssi':SCRIPT_DIR/'SSI.docx'}
-    approach_data={}
-    for key,path in docs.items():
-        if not path.exists(): print(f'WARNING: {path} not found'); approach_data[key]={}; continue
+    docs = {
+        'pbl': SCRIPT_DIR/'PBL.docx',
+        'ibl': SCRIPT_DIR/'IBL.docx',
+        'cbl': SCRIPT_DIR/'CBL.docx',
+        'ssi': SCRIPT_DIR/'SSI.docx',
+    }
+    approach_data = {}
+    for key, path in docs.items():
+        if not path.exists():
+            print(f'WARNING: {path} not found'); approach_data[key]={}; continue
         print(f'Parsing {path.name}...')
-        approach_data[key]=parse_doc(str(path),key)
+        approach_data[key] = parse_doc(str(path), key)
         print(f'  Done: {key}')
-    template_path=SCRIPT_DIR/'template.html'
-    output_path  =SCRIPT_DIR/'pedagogy-hub.html'
-    if not template_path.exists(): print(f'ERROR: template.html not found'); return
-    template=template_path.read_text(encoding='utf-8')
-    for key,data in approach_data.items():
-        template=template.replace(f'__{key.upper()}_DATA__',json.dumps(data,ensure_ascii=False))
-    output_path.write_text(template,encoding='utf-8')
+    template_path = SCRIPT_DIR/'template.html'
+    output_path   = SCRIPT_DIR/'pedagogy-hub.html'
+    if not template_path.exists():
+        print(f'ERROR: template.html not found'); return
+    template = template_path.read_text(encoding='utf-8')
+    for key, data in approach_data.items():
+        template = template.replace(f'__{key.upper()}_DATA__', json.dumps(data, ensure_ascii=False))
+    output_path.write_text(template, encoding='utf-8')
     print(f'\nOutput written to {output_path}')
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
