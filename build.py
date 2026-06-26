@@ -31,6 +31,34 @@ def clean(text):
 
 def esc(s): return html_mod.escape(str(s or ''))
 def para_text(p): return clean(''.join(run.text or '' for run in p.runs))
+
+def para_html(p, rels=None):
+    """Return paragraph content as HTML, with external hyperlinks as <a> tags."""
+    import html as html_mod
+    parts = []
+    for child in p._element:
+        tag = child.tag.split('}')[-1]
+        if tag == 'r':
+            # plain run
+            text = clean(''.join(t.text or '' for t in child.findall('.//' + qn('w:t'))))
+            if text:
+                parts.append(html_mod.escape(text))
+        elif tag == 'hyperlink':
+            rId = child.get(qn('r:id'))
+            text = clean(''.join(t.text or '' for t in child.findall('.//' + qn('w:t'))))
+            url = rels.get(rId) if rels and rId else None
+            if url and url not in ('0', '') and url.startswith('http'):
+                parts.append(f'<a href="{html_mod.escape(url)}" target="_blank" rel="noopener">{html_mod.escape(text)}</a>')
+            else:
+                parts.append(html_mod.escape(text))
+    return ''.join(parts)
+
+def build_rels(doc):
+    """Build rId -> url mapping from document relationships."""
+    rels = {}
+    for rel in doc.part.rels.values():
+        rels[rel.rId] = rel.target_ref
+    return rels
 def is_tech(p): return bool(re.match(r'^\(Tech\)',para_text(p),re.IGNORECASE))
 def strip_tech(t): return re.sub(r'^\(Tech\)\s*','',t,flags=re.IGNORECASE).strip()
 def para_style(p): return (p.style.name or '').strip()
@@ -112,13 +140,15 @@ def get_bullet_level(p, abstract, num_to_abstract):
             if v and int(v)>=400: return 1
     return 0
 
-def cell_bullets(cell, abstract, num_to_abstract):
+def cell_bullets(cell, abstract, num_to_abstract, rels=None):
     bullets=[]
     for p in cell.paragraphs:
         t=para_text(p)
         if not t: continue
         tech=is_tech(p); level=get_bullet_level(p,abstract,num_to_abstract)
-        bullets.append({'text':strip_tech(t) if tech else t,'tech':tech,'level':level})
+        html_text=para_html(p, rels)
+        display=strip_tech(html_text) if tech else html_text
+        bullets.append({'text':display,'tech':tech,'level':level,'is_html':True})
     return bullets
 
 def cell_plain(cell): return clean(cell.text)
@@ -152,7 +182,7 @@ def identify_table(tbl):
     if len(tbl.columns)>=6 and any('more' in h or 'essential' in h for h in headers): return 'diff_ibl'
     return 'unknown'
 
-def parse_phase_table(tbl, abstract, num_to_abstract):
+def parse_phase_table(tbl, abstract, num_to_abstract, rels=None):
     rows=tbl.rows
     if not rows: return None
     col_headers=[cell_plain(c) for c in rows[0].cells]; n_cols=len(col_headers)
@@ -165,8 +195,8 @@ def parse_phase_table(tbl, abstract, num_to_abstract):
         if not cells or not any(cell_plain(c) for c in cells): continue
         phase_label=re.sub(r'\s+',' ',cell_plain(cells[0])).strip()
         phase_label=re.sub(r'^\d+\.\s*','',phase_label)
-        teacher_bullets=cell_bullets(cells[teacher_col],abstract,num_to_abstract) if teacher_col<len(cells) else []
-        student_bullets=cell_bullets(cells[student_col],abstract,num_to_abstract) if student_col<len(cells) else []
+        teacher_bullets=cell_bullets(cells[teacher_col],abstract,num_to_abstract,rels) if teacher_col<len(cells) else []
+        student_bullets=cell_bullets(cells[student_col],abstract,num_to_abstract,rels) if student_col<len(cells) else []
         aims_blocks=parse_aims_cell(cells[aims_col]) if aims_col is not None and aims_col<len(cells) else None
         if phase_label and not teacher_bullets and not student_bullets and not aims_blocks: continue
         parsed_rows.append({'phase':phase_label,'teacher':teacher_bullets,'student':student_bullets,'aims':aims_blocks})
@@ -237,6 +267,7 @@ def render_bullets_html(items, show_tech=True):
     if not items: return ''
     visible=[b for b in items if show_tech or not b.get('tech')]
     if not visible: return ''
+    def txt(b): return b['text'] if b.get('is_html') else esc(b['text'])
     html='<ul class="bullet-list">'
     i=0
     while i<len(visible):
@@ -244,7 +275,7 @@ def render_bullets_html(items, show_tech=True):
         badge='<span class="tech-badge">Tech</span> ' if b.get('tech') else ''
         cls=' class="tech-item"' if b.get('tech') else ''
         if b.get('level',0)==0:
-            html+=f'<li{cls}>{badge}{esc(b["text"])}'
+            html+=f'<li{cls}>{badge}{txt(b)}'
             subs=[]; j=i+1
             while j<len(visible) and visible[j].get('level',0)>=1: subs.append(visible[j]); j+=1
             if subs:
@@ -252,12 +283,12 @@ def render_bullets_html(items, show_tech=True):
                 for s in subs:
                     sb='<span class="tech-badge">Tech</span> ' if s.get('tech') else ''
                     sc=' class="tech-item"' if s.get('tech') else ''
-                    html+=f'<li{sc}>{sb}{esc(s["text"])}</li>'
+                    html+=f'<li{sc}>{sb}{txt(s)}</li>'
                 html+='</ul>'; i=j
             else: i+=1
             html+='</li>'
         else:
-            html+=f'<li{cls} style="list-style:circle;margin-left:1.1em">{badge}{esc(b["text"])}</li>'; i+=1
+            html+=f'<li{cls} style="list-style:circle;margin-left:1.1em">{badge}{txt(b)}</li>'; i+=1
     return html+'</ul>'
 
 def render_aims_html(blocks):
@@ -291,7 +322,8 @@ def render_what_is_html(items):
         else:
             if not in_list: html+='<ul class="what-is-bullets">'; in_list=True
             cls=' class="sub"' if item.get('level',0)>=1 else ''
-            html+=f'<li{cls}>{esc(item["text"])}</li>'
+            txt=item['text'] if item.get('is_html') else esc(item['text'])
+            html+=f'<li{cls}>{txt}</li>'
     close()
     return html
 
@@ -313,7 +345,8 @@ def render_le_preamble_html(items):
         if item.get('type')=='image': parts.append(render_image_html(item['src'],item.get('caption','')))
         else:
             cls=' class="sub"' if item.get('level',0)>=1 else ''
-            parts.append(f'<li{cls}>{esc(item["text"])}</li>')
+            txt=item['text'] if item.get('is_html') else esc(item['text'])
+            parts.append(f'<li{cls}>{txt}</li>')
     # wrap consecutive li items in ul
     out=''; in_ul=False
     for p in parts:
@@ -361,7 +394,7 @@ def has_tech(pt):
 
 def render_diff_preamble_html(items):
     if not items: return ''
-    li=''.join(f'<li>{esc(i["text"])}</li>' for i in items)
+    li=''.join(f'<li>{i["text"] if i.get("is_html") else esc(i["text"])}</li>' for i in items)
     return f'<div class="diff-preamble"><ul>{li}</ul></div>'
 
 def render_diff_standard_html(dt, first_phase_name='Stage 1'):
@@ -400,7 +433,7 @@ def render_diff_ibl_html(dt):
 
 # ── parse one doc ──────────────────────────────────────────────────────────
 def parse_doc(docx_path, approach_key):
-    doc=Document(docx_path); abstract,num_to_abstract=build_numbering_lookup(doc)
+    doc=Document(docx_path); abstract,num_to_abstract=build_numbering_lookup(doc); rels=build_rels(doc)
     body=doc.element.body; data={}
 
     # What is X? — free-flowing
@@ -424,7 +457,8 @@ def parse_doc(docx_path, approach_key):
                         what_is[-1]['caption']=re.sub(r'^\.\s*','',text).strip()
                     continue
                 level=get_bullet_level(p,abstract,num_to_abstract)
-                what_is.append({'type':'bullet','text':text,'tech':is_tech(p),'level':level})
+                html_text=para_html(p,rels)
+                what_is.append({'type':'bullet','text':html_text,'tech':is_tech(p),'level':level,'is_html':True})
         elif tag=='tbl' and in_wi:
             from docx.table import Table as DT
             tbl=DT(child,doc); ttype=identify_table(tbl)
@@ -460,13 +494,14 @@ def parse_doc(docx_path, approach_key):
                     if src: le_preamble.append({'type':'image','src':src,'caption':re.sub(r'^\.\s*','',text).strip()})
                     continue
                 level=get_bullet_level(p,abstract,num_to_abstract)
-                le_preamble.append({'type':'bullet','text':strip_tech(text) if is_tech(p) else text,'tech':is_tech(p),'level':level})
+                html_text=para_html(p,rels)
+                le_preamble.append({'type':'bullet','text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
         elif tag=='tbl' and in_le:
             from docx.table import Table as DT
             tbl=DT(child,doc); ttype=identify_table(tbl)
             if ttype=='key_question': continue
             if ttype=='phase' and not found_phase:
-                phase_table_data=parse_phase_table(tbl,abstract,num_to_abstract); found_phase=True
+                phase_table_data=parse_phase_table(tbl,abstract,num_to_abstract,rels); found_phase=True
     data['le_preamble']=le_preamble
     if phase_table_data: data['phase_table']=phase_table_data
 
@@ -482,7 +517,8 @@ def parse_doc(docx_path, approach_key):
             else:
                 if not text: continue
                 level=get_bullet_level(p,abstract,num_to_abstract)
-                diff_preamble.append({'text':strip_tech(text) if is_tech(p) else text,'tech':is_tech(p),'level':level})
+                html_text=para_html(p,rels)
+                diff_preamble.append({'text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
         elif tag=='tbl' and in_diff:
             from docx.table import Table as DT
             tbl=DT(child,doc); ttype=identify_table(tbl)
