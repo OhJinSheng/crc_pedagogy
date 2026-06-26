@@ -392,6 +392,54 @@ def has_tech(pt):
     if not pt: return False
     return any(b.get('tech') for r in pt.get('rows',[]) for b in r.get('teacher',[])+r.get('student',[]))
 
+def render_diff_stream_html(stream, first_phase_name='Stage 1'):
+    """Render diff section free-flowing: bullets, images, tables in document order."""
+    if not stream: return ''
+    out = ''
+    # collect consecutive bullets into a single <ul>
+    bullet_buf = []
+
+    def flush_bullets():
+        nonlocal out, bullet_buf
+        if not bullet_buf: return
+        li = ''
+        i = 0
+        while i < len(bullet_buf):
+            b = bullet_buf[i]
+            txt = b['text'] if b.get('is_html') else esc(b['text'])
+            if b.get('level', 0) == 0:
+                li += f'<li>{txt}'
+                subs = []; j = i+1
+                while j < len(bullet_buf) and bullet_buf[j].get('level',0) >= 1:
+                    subs.append(bullet_buf[j]); j += 1
+                if subs:
+                    li += '<ul>'
+                    for s in subs:
+                        st = s['text'] if s.get('is_html') else esc(s['text'])
+                        li += f'<li class="sub">{st}</li>'
+                    li += '</ul>'; i = j
+                else: i += 1
+                li += '</li>'
+            else:
+                li += f'<li class="sub">{txt}</li>'; i += 1
+        out += f'<div class="diff-preamble"><ul>{li}</ul></div>'
+        bullet_buf = []
+
+    for item in stream:
+        if item['type'] == 'bullet':
+            bullet_buf.append(item)
+        elif item['type'] == 'image':
+            flush_bullets()
+            out += render_image_html(item['src'], item.get('caption', ''))
+        elif item['type'] == 'table':
+            flush_bullets()
+            if item['table_type'] == 'diff_ibl':
+                out += render_diff_ibl_html(item['data'])
+            elif item['table_type'] == 'diff_standard':
+                out += render_diff_standard_html(item['data'], first_phase_name)
+    flush_bullets()
+    return out
+
 def render_diff_preamble_html(items):
     if not items: return ''
     li=''.join(f'<li>{i["text"] if i.get("is_html") else esc(i["text"])}</li>' for i in items)
@@ -505,8 +553,8 @@ def parse_doc(docx_path, approach_key):
     data['le_preamble']=le_preamble
     if phase_table_data: data['phase_table']=phase_table_data
 
-    # Diff section
-    diff_preamble=[]; diff_table_data=None; in_diff=False
+    # Diff section — free-flowing stream (bullets, images, tables in document order)
+    diff_stream=[]; in_diff=False; last_img_idx=None
     for child in body:
         tag=child.tag.split('}')[-1]
         if tag=='p':
@@ -515,17 +563,29 @@ def parse_doc(docx_path, approach_key):
             if not in_diff:
                 if DIFF_START(tl,style): in_diff=True; continue
             else:
+                if has_image(p):
+                    src=extract_image_b64(p,docx_path)
+                    if src:
+                        caption=re.sub(r'^\.\s*','',text).strip()
+                        diff_stream.append({'type':'image','src':src,'caption':caption})
+                        last_img_idx=len(diff_stream)-1
+                    continue
+                if 'Caption' in style and last_img_idx is not None:
+                    if not diff_stream[last_img_idx]['caption']:
+                        diff_stream[last_img_idx]['caption']=re.sub(r'^\.\s*','',text).strip()
+                    continue
                 if not text: continue
                 level=get_bullet_level(p,abstract,num_to_abstract)
                 html_text=para_html(p,rels)
-                diff_preamble.append({'text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
+                diff_stream.append({'type':'bullet','text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
         elif tag=='tbl' and in_diff:
             from docx.table import Table as DT
             tbl=DT(child,doc); ttype=identify_table(tbl)
-            if ttype=='diff_ibl' and diff_table_data is None: diff_table_data=parse_diff_table_ibl(tbl)
-            elif ttype=='diff_standard' and diff_table_data is None: diff_table_data=parse_diff_table_standard(tbl)
-    data['diff_preamble']=diff_preamble
-    if diff_table_data: data['diff_table']=diff_table_data
+            if ttype=='diff_ibl':
+                diff_stream.append({'type':'table','table_type':'diff_ibl','data':parse_diff_table_ibl(tbl)})
+            elif ttype=='diff_standard':
+                diff_stream.append({'type':'table','table_type':'diff_standard','data':parse_diff_table_standard(tbl)})
+    data['diff_stream']=diff_stream
     return data
 
 # ── build full panel HTML ──────────────────────────────────────────────────
@@ -577,13 +637,9 @@ def build_panel_html(key, data, meta):
         f'<span>An example of a teacher-facilitated LE</span><span class="acc-arrow">&#9660;</span></button>'
         f'<div class="acc-body" id="{key}-le">{le}</div></div>')
 
-    # Accordion 3
-    diff=render_diff_preamble_html(data.get('diff_preamble',[]))
-    dt=data.get('diff_table')
-    if dt:
-        first_phase=pt['rows'][0]['phase'] if pt and pt.get('rows') else 'Stage 1'
-        if dt.get('type')=='ibl_matrix': diff+=render_diff_ibl_html(dt)
-        else: diff+=render_diff_standard_html(dt, first_phase)
+    # Accordion 3 — free-flowing diff stream
+    first_phase=pt['rows'][0]['phase'] if pt and pt.get('rows') else 'Stage 1'
+    diff=render_diff_stream_html(data.get('diff_stream',[]), first_phase)
 
     a3=(f'<div class="accordion">'
         f'<button class="acc-btn" onclick="toggleAcc(\'{key}-diff\')">'
@@ -597,7 +653,7 @@ APPROACH_META = {
     'pbl': {'name':'Problem-Based Learning',          'file':'PBL.docx'},
     'ibl': {'name':'Inquiry-Based Learning',           'file':'IBL.docx'},
     'cbl': {'name':'Concept-Based Learning',           'file':'CBL.docx'},
-    'ssi': {'name':'Socio-Scientific Issues Learning', 'file':'SSI.docx'},
+    'ssi': {'name':'Socio-Scientific Issues-based Learning', 'file':'SSI.docx'},
 }
 
 def main():
