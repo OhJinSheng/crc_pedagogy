@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install python-docx lxml
+        run: pip install python-docx lxml Pillow
       - name: Run build script
         run: python3 build.py
       - name: Commit and push generated HTML
