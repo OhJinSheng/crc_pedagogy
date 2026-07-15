@@ -142,12 +142,6 @@ def get_bullet_level(p, abstract, num_to_abstract):
     if numId_val and numId_val in num_to_abstract:
         abId=num_to_abstract[numId_val]
         if abstract.get(abId,{}).get(str(ilvl_val),'')=='o': return 1
-    pPr=p._element.find(qn('w:pPr'))
-    if pPr is not None:
-        ind=pPr.find(qn('w:ind'))
-        if ind is not None:
-            v=ind.get(qn('w:left'))
-            if v and int(v)>=400: return 1
     return 0
 
 def cell_bullets(cell, abstract, num_to_abstract, rels=None):
@@ -345,6 +339,10 @@ def render_what_is_html(items):
             html+='<ul class="what-is-bullets">'
             for b in item.get('items',[]): html+=f'<li>{esc(b["text"])}</li>'
             html+='</ul>'
+        elif item.get('type')=='para':
+            close()
+            txt=item['text'] if item.get('is_html') else esc(item['text'])
+            html+=f'<p class="stream-para">{txt}</p>'
         else:
             if not in_list: html+='<ul class="what-is-bullets">'; in_list=True
             cls=' class="sub"' if item.get('level',0)>=1 else ''
@@ -377,6 +375,10 @@ def render_le_preamble_html(items):
             if in_ul: out+='</ul>'; in_ul=False
             txt=item['text'] if item.get('is_html') else esc(item['text'])
             out+=f'<div class="section-subheading">{txt}</div>'
+        elif item.get('type') == 'para':
+            if in_ul: out+='</ul>'; in_ul=False
+            txt=item['text'] if item.get('is_html') else esc(item['text'])
+            out+=f'<p class="stream-para">{txt}</p>'
         else:
             cls=' class="sub"' if item.get('level',0)>=1 else ''
             txt=item['text'] if item.get('is_html') else esc(item['text'])
@@ -464,6 +466,10 @@ def render_diff_stream_html(stream, first_phase_name='Stage 1'):
             flush_bullets()
             txt=item['text'] if item.get('is_html') else esc(item['text'])
             out += f'<div class="section-subheading">{txt}</div>'
+        elif item['type'] == 'para':
+            flush_bullets()
+            txt=item['text'] if item.get('is_html') else esc(item['text'])
+            out += f'<p class="stream-para">{txt}</p>'
         elif item['type'] == 'image':
             flush_bullets()
             out += render_image_html(item['src'], item.get('caption', ''))
@@ -553,9 +559,12 @@ def parse_doc(docx_path, approach_key):
                 if 'Heading 3' in style:
                     what_is.append({'type':'subheading','text':para_html(p,rels),'is_html':True})
                     continue
-                level=get_bullet_level(p,abstract,num_to_abstract)
                 html_text=para_html(p,rels)
-                what_is.append({'type':'bullet','text':html_text,'tech':is_tech(p),'level':level,'is_html':True})
+                if 'List Paragraph' in style:
+                    level=get_bullet_level(p,abstract,num_to_abstract)
+                    what_is.append({'type':'bullet','text':html_text,'tech':is_tech(p),'level':level,'is_html':True})
+                else:
+                    what_is.append({'type':'para','text':html_text,'is_html':True})
         elif tag=='tbl' and in_wi:
             from docx.table import Table as DT
             tbl=DT(child,doc); ttype=identify_table(tbl)
@@ -593,9 +602,12 @@ def parse_doc(docx_path, approach_key):
                 if 'Heading 3' in style:
                     le_preamble.append({'type':'subheading','text':para_html(p,rels),'is_html':True})
                     continue
-                level=get_bullet_level(p,abstract,num_to_abstract)
                 html_text=para_html(p,rels)
-                le_preamble.append({'type':'bullet','text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
+                if 'List Paragraph' in style:
+                    level=get_bullet_level(p,abstract,num_to_abstract)
+                    le_preamble.append({'type':'bullet','text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
+                else:
+                    le_preamble.append({'type':'para','text':html_text,'is_html':True})
         elif tag=='tbl' and in_le:
             from docx.table import Table as DT
             tbl=DT(child,doc); ttype=identify_table(tbl)
@@ -630,9 +642,12 @@ def parse_doc(docx_path, approach_key):
                 if 'Heading 3' in style:
                     diff_stream.append({'type':'subheading','text':para_html(p,rels),'is_html':True})
                     continue
-                level=get_bullet_level(p,abstract,num_to_abstract)
                 html_text=para_html(p,rels)
-                diff_stream.append({'type':'bullet','text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
+                if 'List Paragraph' in style:
+                    level=get_bullet_level(p,abstract,num_to_abstract)
+                    diff_stream.append({'type':'bullet','text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
+                else:
+                    diff_stream.append({'type':'para','text':html_text,'is_html':True})
         elif tag=='tbl' and in_diff:
             from docx.table import Table as DT
             tbl=DT(child,doc); ttype=identify_table(tbl)
