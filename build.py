@@ -138,6 +138,7 @@ def get_bullet_level(p, abstract, num_to_abstract):
         ilvl_el=numPr.find(qn('w:ilvl')); numId_el=numPr.find(qn('w:numId'))
         if ilvl_el is not None: ilvl_val=int(ilvl_el.get(qn('w:val'),'0'))
         if numId_el is not None: numId_val=numId_el.get(qn('w:val'))
+    if ilvl_val>=2: return 2
     if ilvl_val>=1: return 1
     if numId_val and numId_val in num_to_abstract:
         abId=num_to_abstract[numId_val]
@@ -300,27 +301,47 @@ def render_bullets_html(items, show_tech=True):
     visible=[b for b in items if show_tech or not b.get('tech')]
     if not visible: return ''
     def txt(b): return b['text'] if b.get('is_html') else esc(b['text'])
+    def make_li(b, extra_style=''):
+        badge='<span class="tech-badge">Tech</span> ' if b.get('tech') else ''
+        cls=' class="tech-item"' if b.get('tech') else ''
+        style=f' style="{extra_style}"' if extra_style else ''
+        return f'<li{cls}{style}>{badge}{txt(b)}'
     html='<ul class="bullet-list">'
     i=0
     while i<len(visible):
         b=visible[i]
-        badge='<span class="tech-badge">Tech</span> ' if b.get('tech') else ''
-        cls=' class="tech-item"' if b.get('tech') else ''
-        if b.get('level',0)==0:
-            html+=f'<li{cls}>{badge}{txt(b)}'
+        level=b.get('level',0)
+        if level==0:
+            html+=make_li(b)
+            # collect level 1 subs
             subs=[]; j=i+1
             while j<len(visible) and visible[j].get('level',0)>=1: subs.append(visible[j]); j+=1
             if subs:
                 html+='<ul>'
-                for s in subs:
-                    sb='<span class="tech-badge">Tech</span> ' if s.get('tech') else ''
-                    sc=' class="tech-item"' if s.get('tech') else ''
-                    html+=f'<li{sc}>{sb}{txt(s)}</li>'
+                k=0
+                while k<len(subs):
+                    s=subs[k]
+                    if s.get('level',0)==1:
+                        html+=make_li(s,'list-style:circle')
+                        # collect level 2 subs
+                        subs2=[]; m=k+1
+                        while m<len(subs) and subs[m].get('level',0)>=2: subs2.append(subs[m]); m+=1
+                        if subs2:
+                            html+='<ul>'
+                            for s2 in subs2:
+                                html+=make_li(s2,'list-style:square;margin-left:1.1em')+'</li>'
+                            html+='</ul>'; k=m
+                        else: k+=1
+                        html+='</li>'
+                    else:
+                        html+=make_li(s,'list-style:square;margin-left:1.1em')+'</li>'; k+=1
                 html+='</ul>'; i=j
             else: i+=1
             html+='</li>'
+        elif level==1:
+            html+=make_li(b,'list-style:circle;margin-left:1.1em')+'</li>'; i+=1
         else:
-            html+=f'<li{cls} style="list-style:circle;margin-left:1.1em">{badge}{txt(b)}</li>'; i+=1
+            html+=make_li(b,'list-style:square;margin-left:2.2em')+'</li>'; i+=1
     return html+'</ul>'
 
 def render_aims_html(blocks):
@@ -361,7 +382,10 @@ def render_what_is_html(items):
             html+=f'<p class="stream-para">{txt}</p>'
         else:
             if not in_list: html+='<ul class="what-is-bullets">'; in_list=True
-            cls=' class="sub"' if item.get('level',0)>=1 else ''
+            level=item.get('level',0)
+            if level==2: cls=' class="sub2"'
+            elif level==1: cls=' class="sub"'
+            else: cls=''
             txt=item['text'] if item.get('is_html') else esc(item['text'])
             html+=f'<li{cls}>{txt}</li>'
     close()
@@ -457,21 +481,40 @@ def render_diff_stream_html(stream, first_phase_name='Stage 1'):
         while i < len(bullet_buf):
             b = bullet_buf[i]
             txt = b['text'] if b.get('is_html') else esc(b['text'])
-            if b.get('level', 0) == 0:
+            level = b.get('level', 0)
+            if level == 0:
                 li += f'<li>{txt}'
                 subs = []; j = i+1
                 while j < len(bullet_buf) and bullet_buf[j].get('level',0) >= 1:
                     subs.append(bullet_buf[j]); j += 1
                 if subs:
                     li += '<ul>'
-                    for s in subs:
+                    k = 0
+                    while k < len(subs):
+                        s = subs[k]
                         st = s['text'] if s.get('is_html') else esc(s['text'])
-                        li += f'<li class="sub">{st}</li>'
+                        if s.get('level',0) == 1:
+                            li += f'<li class="sub">{st}'
+                            subs2 = []; m = k+1
+                            while m < len(subs) and subs[m].get('level',0) >= 2:
+                                subs2.append(subs[m]); m += 1
+                            if subs2:
+                                li += '<ul>'
+                                for s2 in subs2:
+                                    s2t = s2['text'] if s2.get('is_html') else esc(s2['text'])
+                                    li += f'<li class="sub2">{s2t}</li>'
+                                li += '</ul>'; k = m
+                            else: k += 1
+                            li += '</li>'
+                        else:
+                            li += f'<li class="sub2">{st}</li>'; k += 1
                     li += '</ul>'; i = j
                 else: i += 1
                 li += '</li>'
-            else:
+            elif level == 1:
                 li += f'<li class="sub">{txt}</li>'; i += 1
+            else:
+                li += f'<li class="sub2">{txt}</li>'; i += 1
         out += f'<div class="diff-preamble"><ul>{li}</ul></div>'
         bullet_buf = []
 
