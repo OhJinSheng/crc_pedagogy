@@ -203,13 +203,23 @@ def parse_phase_table(tbl, abstract, num_to_abstract, rels=None):
     for row in rows[1:]:
         cells=row.cells
         if not cells or not any(cell_plain(c) for c in cells): continue
-        phase_label=re.sub(r'\s+',' ',cell_plain(cells[0])).strip()
-        phase_label=re.sub(r'^\d+\.\s*','',phase_label)
+        # Phase label: Heading 3 = main name, Normal = sub-label
+        col0_paras = [(p.style.name or '', para_html(p, rels), para_text(p))
+                      for p in cells[0].paragraphs if para_text(p).strip()]
+        if col0_paras:
+            main = col0_paras[0]
+            phase_label = re.sub(r'^\d+\.\s*','', (main[2] if not main[1] else main[2])).strip()
+            phase_html_label = main[1] if main[1] else esc(main[2])
+            sub_paras = col0_paras[1:]
+            phase_sub = ' '.join(p[2] for p in sub_paras).strip()
+            phase_sub_html = ' '.join(p[1] for p in sub_paras).strip()
+        else:
+            phase_label = ''; phase_html_label = ''; phase_sub = ''; phase_sub_html = ''
         teacher_bullets=cell_bullets(cells[teacher_col],abstract,num_to_abstract,rels) if teacher_col<len(cells) else []
         student_bullets=cell_bullets(cells[student_col],abstract,num_to_abstract,rels) if student_col<len(cells) else []
         aims_blocks=parse_aims_cell(cells[aims_col]) if aims_col is not None and aims_col<len(cells) else None
         if phase_label and not teacher_bullets and not student_bullets and not aims_blocks: continue
-        parsed_rows.append({'phase':phase_label,'teacher':teacher_bullets,'student':student_bullets,'aims':aims_blocks})
+        parsed_rows.append({'phase':phase_label,'phase_html':phase_html_label,'phase_sub':phase_sub,'phase_sub_html':phase_sub_html,'teacher':teacher_bullets,'student':student_bullets,'aims':aims_blocks})
     return {'col_headers':col_headers,'teacher_col':teacher_col,'student_col':student_col,'aims_col':aims_col,'rows':parsed_rows}
 
 def parse_diff_table_standard(tbl, abstract=None, num_to_abstract=None, rels=None):
@@ -326,6 +336,10 @@ def render_what_is_html(items):
     for item in items:
         if item.get('type')=='image':
             close(); html+=render_image_html(item['src'], item.get('caption',''))
+        elif item.get('type')=='subheading':
+            close()
+            txt=item['text'] if item.get('is_html') else esc(item['text'])
+            html+=f'<div class="section-subheading">{txt}</div>'
         elif item.get('type')=='bullet_group':
             close()
             html+='<ul class="what-is-bullets">'
@@ -352,22 +366,22 @@ def render_key_question_html(paras):
 
 def render_le_preamble_html(items):
     if not items: return ''
-    parts=[]
+    out=''; in_ul=False
+    # wrap consecutive li items in ul
+    out=''; in_ul=False
     for item in items:
-        if item.get('type')=='image': parts.append(render_image_html(item['src'],item.get('caption','')))
+        if item.get('type') == 'image':
+            if in_ul: out+='</ul>'; in_ul=False
+            out+=render_image_html(item['src'], item.get('caption',''))
+        elif item.get('type') == 'subheading':
+            if in_ul: out+='</ul>'; in_ul=False
+            txt=item['text'] if item.get('is_html') else esc(item['text'])
+            out+=f'<div class="section-subheading">{txt}</div>'
         else:
             cls=' class="sub"' if item.get('level',0)>=1 else ''
             txt=item['text'] if item.get('is_html') else esc(item['text'])
-            parts.append(f'<li{cls}>{txt}</li>')
-    # wrap consecutive li items in ul
-    out=''; in_ul=False
-    for p in parts:
-        if p.startswith('<li'):
             if not in_ul: out+='<ul>'; in_ul=True
-            out+=p
-        else:
-            if in_ul: out+='</ul>'; in_ul=False
-            out+=p
+            out+=f'<li{cls}>{txt}</li>'
     if in_ul: out+='</ul>'
     return f'<div class="le-preamble">{out}</div>' if out else ''
 
@@ -382,7 +396,10 @@ def render_phase_table_html(pt, is_ibl=False, key=''):
         st=render_bullets_html(r.get('student',[]))
         aims=render_aims_html(r.get('aims') or [])
         aims_td=f'<td class="aims-cell-td"><div class="cell-scroll">{aims}</div></td>' if r.get('aims') is not None else ''
-        trs+=f'<tr><td class="phase-label">{esc(r["phase"])}</td><td><div class="cell-scroll">{th}</div></td><td><div class="cell-scroll">{st}</div></td>{aims_td}</tr>'
+        phase_html = r.get('phase_html') or esc(r['phase'])
+        sub_html = r.get('phase_sub_html') or (esc(r['phase_sub']) if r.get('phase_sub') else '')
+        sub_div = f'<div class="phase-sublabel">{sub_html}</div>' if sub_html else ''
+        trs+=f'<tr><td class="phase-label">{phase_html}{sub_div}</td><td><div class="cell-scroll">{th}</div></td><td><div class="cell-scroll">{st}</div></td>{aims_td}</tr>'
     return f'<div class="phase-table-wrap"><table class="phase-tbl{wclass}" cellspacing="0"><thead><tr>{ths}</tr></thead><tbody>{trs}</tbody></table></div>'
 
 def render_phase_cards_html(pt):
@@ -397,7 +414,10 @@ def render_phase_cards_html(pt):
         t_sec=f'<div class="card-role">{esc(l2)}</div>{th}' if th else ''
         s_sec=f'<div class="card-role">{esc(l3)}</div>{st}' if st else ''
         a_sec=f'<div class="card-aims">{aims}</div>' if aims else ''
-        cards+=f'<div class="phase-card"><h3>{esc(r["phase"])}</h3>{t_sec}{s_sec}{a_sec}</div>'
+        phase_html = r.get('phase_html') or esc(r['phase'])
+        sub_html = r.get('phase_sub_html') or (esc(r['phase_sub']) if r.get('phase_sub') else '')
+        sub_div = f'<div class="phase-sublabel">{sub_html}</div>' if sub_html else ''
+        cards+=f'<div class="phase-card"><h3>{phase_html}</h3>{sub_div}{t_sec}{s_sec}{a_sec}</div>'
     return f'<div class="cards-grid">{cards}</div>'
 
 def has_tech(pt):
@@ -440,6 +460,10 @@ def render_diff_stream_html(stream, first_phase_name='Stage 1'):
     for item in stream:
         if item['type'] == 'bullet':
             bullet_buf.append(item)
+        elif item['type'] == 'subheading':
+            flush_bullets()
+            txt=item['text'] if item.get('is_html') else esc(item['text'])
+            out += f'<div class="section-subheading">{txt}</div>'
         elif item['type'] == 'image':
             flush_bullets()
             out += render_image_html(item['src'], item.get('caption', ''))
@@ -526,6 +550,9 @@ def parse_doc(docx_path, approach_key):
                     if what_is and what_is[-1].get('type')=='image' and not what_is[-1]['caption']:
                         what_is[-1]['caption']=re.sub(r'^\.\s*','',text).strip()
                     continue
+                if 'Heading 3' in style:
+                    what_is.append({'type':'subheading','text':para_html(p,rels),'is_html':True})
+                    continue
                 level=get_bullet_level(p,abstract,num_to_abstract)
                 html_text=para_html(p,rels)
                 what_is.append({'type':'bullet','text':html_text,'tech':is_tech(p),'level':level,'is_html':True})
@@ -563,6 +590,9 @@ def parse_doc(docx_path, approach_key):
                     src=extract_image_b64(p,docx_path)
                     if src: le_preamble.append({'type':'image','src':src,'caption':re.sub(r'^\.\s*','',text).strip()})
                     continue
+                if 'Heading 3' in style:
+                    le_preamble.append({'type':'subheading','text':para_html(p,rels),'is_html':True})
+                    continue
                 level=get_bullet_level(p,abstract,num_to_abstract)
                 html_text=para_html(p,rels)
                 le_preamble.append({'type':'bullet','text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
@@ -597,6 +627,9 @@ def parse_doc(docx_path, approach_key):
                         diff_stream[last_img_idx]['caption']=re.sub(r'^\.\s*','',text).strip()
                     continue
                 if not text: continue
+                if 'Heading 3' in style:
+                    diff_stream.append({'type':'subheading','text':para_html(p,rels),'is_html':True})
+                    continue
                 level=get_bullet_level(p,abstract,num_to_abstract)
                 html_text=para_html(p,rels)
                 diff_stream.append({'type':'bullet','text':strip_tech(html_text) if is_tech(p) else html_text,'tech':is_tech(p),'level':level,'is_html':True})
