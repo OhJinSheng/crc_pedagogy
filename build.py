@@ -212,7 +212,7 @@ def parse_phase_table(tbl, abstract, num_to_abstract, rels=None):
         parsed_rows.append({'phase':phase_label,'teacher':teacher_bullets,'student':student_bullets,'aims':aims_blocks})
     return {'col_headers':col_headers,'teacher_col':teacher_col,'student_col':student_col,'aims_col':aims_col,'rows':parsed_rows}
 
-def parse_diff_table_standard(tbl):
+def parse_diff_table_standard(tbl, abstract=None, num_to_abstract=None, rels=None):
     rows=tbl.rows
     if not rows: return {'type':'standard','headers':[],'stages':[],'has_role_col':False}
     headers=[cell_plain(c) for c in rows[0].cells]
@@ -220,24 +220,26 @@ def parse_diff_table_standard(tbl):
     higher_col=next((i for i,h in enumerate(headers) if 'higher' in h.lower()),2)
     role_col=next((i for i,h in enumerate(headers) if h.lower()=='role'),None)
     stages=[]
+    ab=abstract or {}; nm=num_to_abstract or {}
     for row in rows[1:]:
         cells=row.cells
         if not cells or not any(cell_plain(c) for c in cells): continue
         stage_val=cell_plain(cells[0])
-        lower_val=cell_plain(cells[lower_col]) if lower_col<len(cells) else ''
-        higher_val=cell_plain(cells[higher_col]) if higher_col<len(cells) else ''
+        lower_bullets=cell_bullets(cells[lower_col],ab,nm,rels) if lower_col<len(cells) else []
+        higher_bullets=cell_bullets(cells[higher_col],ab,nm,rels) if higher_col<len(cells) else []
         role_val=cell_plain(cells[role_col]) if role_col is not None and role_col<len(cells) else None
         if role_col is not None:
             if stage_val and (not stages or stage_val!=stages[-1]['stage']):
-                stages.append({'stage':stage_val,'teacher_lower':'','teacher_higher':'','student_lower':'','student_higher':''})
+                stages.append({'stage':stage_val,'teacher_lower':[],'teacher_higher':[],'student_lower':[],'student_higher':[]})
             if stages:
-                if role_val and 'teacher' in role_val.lower(): stages[-1]['teacher_lower']=lower_val; stages[-1]['teacher_higher']=higher_val
-                elif role_val and 'student' in role_val.lower(): stages[-1]['student_lower']=lower_val; stages[-1]['student_higher']=higher_val
+                if role_val and 'teacher' in role_val.lower(): stages[-1]['teacher_lower']=lower_bullets; stages[-1]['teacher_higher']=higher_bullets
+                elif role_val and 'student' in role_val.lower(): stages[-1]['student_lower']=lower_bullets; stages[-1]['student_higher']=higher_bullets
         else:
-            if stage_val: stages.append({'stage':stage_val,'lower':lower_val,'higher':higher_val})
-            else:
-                if not stages: stages.append({'stage':UNNAMED,'lower':lower_val,'higher':higher_val})
-                else: stages[-1]['lower']=(stages[-1].get('lower','')+' '+lower_val).strip(); stages[-1]['higher']=(stages[-1].get('higher','')+' '+higher_val).strip()
+            if stage_val: stages.append({'stage':stage_val,'lower':lower_bullets,'higher':higher_bullets})
+            elif stages:
+                stages[-1]['lower']=stages[-1].get('lower',[])+lower_bullets
+                stages[-1]['higher']=stages[-1].get('higher',[])+higher_bullets
+            else: stages.append({'stage':UNNAMED,'lower':lower_bullets,'higher':higher_bullets})
     return {'type':'standard','headers':headers,'stages':stages,'has_role_col':role_col is not None}
 
 def parse_diff_table_ibl(tbl):
@@ -455,6 +457,12 @@ def render_diff_preamble_html(items):
     li=''.join(f'<li>{i["text"] if i.get("is_html") else esc(i["text"])}</li>' for i in items)
     return f'<div class="diff-preamble"><ul>{li}</ul></div>'
 
+def render_diff_cell(val):
+    """Render a diff cell: list of bullet dicts -> bullet HTML, or plain string."""
+    if isinstance(val, list):
+        return render_bullets_html(val, show_tech=True) if val else ''
+    return esc(str(val)) if val else ''
+
 def render_diff_standard_html(dt, first_phase_name='Stage 1'):
     if not dt or not dt.get('stages'): return ''
     headers=dt['headers']; has_role=dt.get('has_role_col',False)
@@ -465,11 +473,15 @@ def render_diff_standard_html(dt, first_phase_name='Stage 1'):
         if has_role:
             rows+=(f'<tr><td class="diff-stage" rowspan="2">{esc(name)}</td>'
                    f'<td class="diff-role">Teacher</td>'
-                   f'<td>{esc(s.get("teacher_lower",""))}</td><td>{esc(s.get("teacher_higher",""))}</td></tr>'
+                   f'<td>{render_diff_cell(s.get("teacher_lower",""))}</td>'
+                   f'<td>{render_diff_cell(s.get("teacher_higher",""))}</td></tr>'
                    f'<tr><td class="diff-role">Students</td>'
-                   f'<td>{esc(s.get("student_lower",""))}</td><td>{esc(s.get("student_higher",""))}</td></tr>')
+                   f'<td>{render_diff_cell(s.get("student_lower",""))}</td>'
+                   f'<td>{render_diff_cell(s.get("student_higher",""))}</td></tr>')
         else:
-            rows+=f'<tr><td class="diff-stage">{esc(name)}</td><td>{esc(s.get("lower",""))}</td><td>{esc(s.get("higher",""))}</td></tr>'
+            rows+=(f'<tr><td class="diff-stage">{esc(name)}</td>'
+                   f'<td>{render_diff_cell(s.get("lower",""))}</td>'
+                   f'<td>{render_diff_cell(s.get("higher",""))}</td></tr>')
     return f'<div style="overflow-x:auto"><table class="diff-tbl" cellspacing="0"><thead><tr>{ths}</tr></thead><tbody>{rows}</tbody></table></div>'
 
 def render_diff_ibl_html(dt):
@@ -594,7 +606,7 @@ def parse_doc(docx_path, approach_key):
             if ttype=='diff_ibl':
                 diff_stream.append({'type':'table','table_type':'diff_ibl','data':parse_diff_table_ibl(tbl)})
             elif ttype=='diff_standard':
-                diff_stream.append({'type':'table','table_type':'diff_standard','data':parse_diff_table_standard(tbl)})
+                diff_stream.append({'type':'table','table_type':'diff_standard','data':parse_diff_table_standard(tbl,abstract,num_to_abstract,rels)})
     data['diff_stream']=diff_stream
     return data
 
