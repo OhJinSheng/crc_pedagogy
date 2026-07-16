@@ -75,7 +75,7 @@ def para_style(p): return (p.style.name or '').strip()
 def is_heading(p): return any(s in para_style(p) for s in ('Title','Heading'))
 def has_image(p): return bool(p._element.findall('.//' + qn('a:blip')))
 
-def compress_image(image_bytes, max_width=900, quality=72):
+def compress_image(image_bytes, max_width=None, quality=92):
     try:
         img = Image.open(io.BytesIO(image_bytes))
         if img.mode in ('RGBA','P','LA'):
@@ -84,7 +84,7 @@ def compress_image(image_bytes, max_width=900, quality=72):
             bg.paste(img2, mask=img2.split()[-1])
             img = bg
         elif img.mode != 'RGB': img = img.convert('RGB')
-        if img.width > max_width:
+        if max_width and img.width > max_width:
             ratio = max_width/img.width
             img = img.resize((max_width,int(img.height*ratio)), Image.LANCZOS)
         buf = io.BytesIO()
@@ -101,7 +101,7 @@ def extract_image_b64(p, docx_path):
     for rel in doc2.part.rels.values():
         if rel.reltype.endswith('/image') and rel.rId == rId:
             image_bytes = rel.target_part.blob
-            if len(image_bytes) > 100*1024:
+            if True:  # always convert to high-quality JPEG
                 image_bytes, mime = compress_image(image_bytes)
             else:
                 mime = 'image/png' if image_bytes[:4]==b'\x89PNG' else 'image/jpeg'
